@@ -1,1 +1,2 @@
 fonttools==3.13.1
+defcon==0.3.4

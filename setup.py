@@ -65,6 +65,7 @@ setup(name="psautohint",
       },
       install_requires=[
           'fonttools>=3.1.2',
+          'defcon>=0.2.0',
       ],
       classifiers=[
           'Development Status :: 4 - Beta',
