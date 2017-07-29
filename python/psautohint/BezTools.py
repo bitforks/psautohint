@@ -13,15 +13,11 @@ Copyright 2014-2017 Adobe Systems Incorporated (http://www.adobe.com/). All Righ
 import sys
 import re
 import os
-from fontTools.misc.psCharStrings import T2OutlineExtractor, SimpleT2Decompiler
 from fontTools.misc.py23 import *
 
 from psautohint import ConvertFontToCID
+from psautohint.glyphToBezPen import GlyphToBezPen
 
-debug = False
-def debugMsg(*args):
-	if debug:
-		print(args)
 
 kStackLimit = 46
 kStemLimit = 96
@@ -29,180 +25,6 @@ kStemLimit = 96
 class ACFontError(KeyError):
 	pass
 
-class SEACError(KeyError):
-	pass
-
-def hintOn(i, hintMaskBytes):
-	# used to add the active hints to the bez string,
-	# when a T2 hintmask operator is encountered.
-	byteIndex = int(i/8)
-	byteValue = byteord(hintMaskBytes[byteIndex])
-	offset = 7 - (i %8)
-	return ((2**offset) & byteValue) > 0
-
-
-class T2ToBezExtractor(T2OutlineExtractor):
-	# The T2OutlineExtractor class calls a class method as the handler for each
-	# T2 operator.
-	# I use this to convert the T2 operands and arguments to bez operators.
-	# Note: flex is converted to regular rrcurveto's.
-	# cntrmasks just map to hint replacement blocks with the specified stems.
-	def __init__(self, localSubrs, globalSubrs, nominalWidthX, defaultWidthX,
-					allowDecimals=False):
-		T2OutlineExtractor.__init__(self, None, localSubrs, globalSubrs, nominalWidthX, defaultWidthX)
-		self.vhints = []
-		self.hhints = []
-		self.bezProgram = []
-		self.firstMarkingOpSeen = False
-		self.closePathSeen = False
-		self.subrLevel = 0
-		self.allowDecimals = allowDecimals
-
-	def execute(self, charString):
-		self.subrLevel += 1
-		SimpleT2Decompiler.execute(self,charString)
-		self.subrLevel -= 1
-		if (not self.closePathSeen) and (self.subrLevel == 0):
-			 self.closePath()
-
-	def rMoveTo(self, point):
-		point = self._nextPoint(point)
-		if not self.firstMarkingOpSeen :
-			self.firstMarkingOpSeen = True
-			self.bezProgram.append("sc\n")
-		debugMsg("moveto", point, "curpos", self.currentPoint)
-		x = point[0]
-		y = point[1]
-		if (not self.allowDecimals):
-			x = int(round(x))
-			y = int(round(y))
-			self.bezProgram.append("%s  %s mt\n" % (x, y))
-		else:
-			self.bezProgram.append("%.2f  %.2f mt\n" % (x, y))
-		self.sawMoveTo = 1
-
-	def rLineTo(self, point):
-		point = self._nextPoint(point)
-		if not self.firstMarkingOpSeen :
-			self.firstMarkingOpSeen = True
-			self.bezProgram.append("sc\n")
-			self.bezProgram.append("0 0 mt\n")
-		debugMsg("lineto", point, "curpos", self.currentPoint)
-		if not self.sawMoveTo:
-			self.rMoveTo((0, 0))
-		x = point[0]
-		y = point[1]
-		if (not self.allowDecimals):
-			x = int(round(x))
-			y = int(round(y))
-			self.bezProgram.append("%s  %s dt\n" % (x, y))
-		else:
-			self.bezProgram.append("%.2f  %.2f dt\n" % (x, y))
-
-	def rCurveTo(self, pt1, pt2, pt3):
-		pt1 = list(self._nextPoint(pt1))
-		pt2 = list(self._nextPoint(pt2))
-		pt3 = list(self._nextPoint(pt3))
-		if not self.firstMarkingOpSeen :
-			self.firstMarkingOpSeen = True
-			self.bezProgram.append("sc\n")
-			self.bezProgram.append("0 0 mt\n")
-		debugMsg("curveto", pt1, pt2, pt3, "curpos", self.currentPoint)
-		if not self.sawMoveTo:
-			self.rMoveTo((0, 0))
-		if (not self.allowDecimals):
-			for pt in [pt1, pt2, pt3]:
-				pt[0] = int(round(pt[0]))
-				pt[1] = int(round(pt[1]))
-			self.bezProgram.append("%s %s %s %s %s %s ct\n" % (pt1[0], pt1[1], pt2[0], pt2[1], pt3[0], pt3[1]))
-		else:
-			self.bezProgram.append("%.2f %.2f %.2f %.2f %.2f %.2f ct\n" % (pt1[0], pt1[1], pt2[0], pt2[1], pt3[0], pt3[1]))
-
-	def op_endchar(self, index):
-		self.endPath()
-		args = self.popallWidth()
-		if args: # It is a 'seac' composite character. Don't process
-			raise SEACError
-
-	def endPath(self):
-		# In T2 there are no open paths, so always do a closePath when
-		# finishing a sub path.
-		if self.sawMoveTo:
-			debugMsg("endPath")
-			self.bezProgram.append("cp\n")
-		self.sawMoveTo = 0
-
-	def closePath(self):
-		self.closePathSeen = True
-		debugMsg("closePath")
-		if self.bezProgram and self.bezProgram[-1] != "cp\n":
-			self.bezProgram.append("cp\n")
-		self.bezProgram.append("ed\n")
-
-	def op_hstem(self, index):
-		args = self.popallWidth()
-		self.hhints = []
-		self.countHints(args)
-		debugMsg("hstem", self.hhints)
-
-	def op_vstem(self, index):
-		args = self.popallWidth()
-		self.vhints = []
-		self.countHints(args)
-		debugMsg("vstem", self.vhints)
-
-	def op_hstemhm(self, index):
-		args = self.popallWidth()
-		self.hhints = []
-		self.countHints(args)
-		debugMsg("stemhm", self.hhints, args)
-
-	def op_vstemhm(self, index):
-		args = self.popallWidth()
-		self.vhints = []
-		self.countHints(args)
-		debugMsg("vstemhm", self.vhints, args)
-
-	def doMask(self, index, bezCommand):
-		args = []
-		if not self.hintMaskBytes:
-			args = self.popallWidth()
-			if args:
-				self.vhints = []
-				self.countHints(args)
-			self.hintMaskBytes = int((self.hintCount + 7) / 8)
-
-		self.hintMaskString, index = self.callingStack[-1].getBytes(index, self.hintMaskBytes)
-
-		return self.hintMaskString, index
-
-	def op_hintmask(self, index):
-		hintMaskString, index = self.doMask(index, "hintmask")
-		return hintMaskString, index
-
-	def op_cntrmask(self, index):
-		hintMaskString, index = self.doMask(index, "cntrmask")
-		return hintMaskString, index
-
-	def countHints(self, args):
-		self.hintCount = self.hintCount + int(len(args) / 2)
-
-def convertT2GlyphToBez(t2CharString, allowDecimals=False):
-	# wrapper for T2ToBezExtractor which applies it to the supplied T2 charstring
-	bezString = ""
-	subrs = getattr(t2CharString.private, "Subrs", [])
-	extractor = T2ToBezExtractor(
-				subrs,
-				t2CharString.globalSubrs,
-				t2CharString.private.nominalWidthX,
-				t2CharString.private.defaultWidthX,
-				allowDecimals)
-	extractor.execute(t2CharString)
-	if extractor.gotWidth:
-		t2Wdth = extractor.width - t2CharString.private.nominalWidthX
-	else:
-		t2Wdth = None
-	return "".join(extractor.bezProgram), extractor.hintCount > 0, t2Wdth
 
 class HintMask:
 	# class used to collect hints for the current hint mask when converting bez to T2.
@@ -1014,26 +836,25 @@ class CFFFontData:
 		return psName
 
 	def convertToBez(self, glyphName, beVerbose, doAll=False):
-		hasHints = False
-		t2Wdth = None
-		gid = self.charStrings.charStrings[glyphName]
-		t2CharString = self.charStringIndex[gid]
-		try:
-			bezString, hasHints, t2Wdth = convertT2GlyphToBez(t2CharString,
-														self.allowDecimalCoords)
-			# Note: the glyph name is important, as it is used by autohintexe
-			# for various heuristics, including [hv]stem3 derivation.
-			bezString = (r"%%%s%s " % (glyphName, os.linesep)) + bezString
-		except SEACError:
-			if not beVerbose:
-				dotCount = 0
-				self.logMsg("") # end series of "."
-				self.logMsg("Checking %s -- ," % (glyphName)) # output message when SEAC glyph is found
-			self.logMsg("Skipping %s: can't process SEAC composite glyphs." % (glyphName))
-			bezString = None
-		return bezString, t2Wdth, hasHints
+		glyphSet = self.ttFont.getGlyphSet()
+		glyph = glyphSet[glyphName]
+
+		pen = GlyphToBezPen(glyphSet, self.allowDecimalCoords)
+		glyph.draw(pen)
+
+		# Note: the glyph name is important, as it is used by libpsautohint
+		# for various heuristics, including [hv]stem3 derivation.
+		bezString = "%" + glyphName + "\n" + pen.getBezString()
+
+		hasHints = False # FIXME
+
+		return bezString, glyph.width, hasHints
 
 	def updateFromBez(self, bezData, glyphName, width, beVerbose):
+		gid = self.charStrings.charStrings[glyphName]
+		t2CharString = self.charStringIndex[gid]
+		width -= t2CharString.private.nominalWidthX
+
 		t2Program = [width] + convertBezToT2(bezData)
 		if t2Program:
 			gid = self.charStrings.charStrings[glyphName]
@@ -1295,19 +1116,22 @@ def test():
 		glyphNames = sys.argv[2:]
 	else:
 		glyphNames = ttFont.getGlyphOrder()
-	cffTable = ttFont["CFF "]
-	topDict = cffTable.cff.topDictIndex[0]
-	charStrings = topDict.CharStrings
+
+	glyphSet = self.ttFont.getGlyphSet()
 
 	for glyphName in glyphNames:
 		print()
 		print(glyphName)
-		t2CharString = charStrings[glyphName]
-		bezString, hasHints, t2Width = convertT2GlyphToBez(t2CharString)
+
+		glyph = glyphSet[glyphName]
+		pen = GlyphToBezPen(glyphSet, self.allowDecimalCoords)
+		glyph.draw(pen)
+		bezString = pen.getBezString()
+
 		#print(bezString)
 		t2Program = convertBezToT2(bezString)
 		if t2Width != None:
-			t2Program.insert(0,t2Width)
+			t2Program.insert(0, glyph.width)
 
 		#print(len(t2Program), ("t2Program",t2Program))
 
