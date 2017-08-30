@@ -14,12 +14,12 @@
 //#include "chartable.h"
 //#include "hintfile.h"
 #include "bbox.h"
-#include "masterfont.h"
 #include "opcodes.h"
 #include "optable.h"
 #include "transitionalchars.h"
 
 #define FONTSTKLIMIT 22
+#define MAXDESIGNS 16 /* maximum number of base designs for a multiple master font. */
 
 extern double atan2(double, double);
 
@@ -100,7 +100,7 @@ static bool ZeroLengthCP(indx, indx);
 static int16_t GetOperandCount(int16_t);
 static void GetLengthandSubrIx(int16_t, int16_t*, int16_t*);
 
-void
+static void
 GetMasterDirName(char* dirname, indx ix)
 {
     (void)ix;

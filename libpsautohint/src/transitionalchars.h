@@ -4,8 +4,6 @@ This software is licensed as OpenSource, under the Apache License, Version 2.0. 
 #ifndef TRANSITIONALCHARS_H
 #define TRANSITIONALCHARS_H
 
-#include "masterfontpriv.h"
-  
 #define TRANSITIONALCHARFILENAME "transitionalchars"
 
 typedef float Ary4[4];
