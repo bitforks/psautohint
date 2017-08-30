@@ -422,7 +422,7 @@ ChangetoCurve(indx dirIx, indx pathIx)
 static bool
 ZeroLengthCP(indx dirIx, indx pathIx)
 {
-    Cd startPt = { 0 }, endPt = { 0 };
+    Cd startPt, endPt;
 
     GetEndPoints1(dirIx, pathIx, &startPt, &endPt);
     return (startPt.x == endPt.x && startPt.y == endPt.y);
@@ -1611,7 +1611,7 @@ CheckFlexValues(int16_t* operator, indx eltix, indx flexix, bool* xequal,
                 bool* yequal)
 {
     indx ix;
-    Cd coord = { 0 };
+    Cd coord;
 
     *operator= RMT;
     if (flexix < 2)
@@ -2222,7 +2222,7 @@ CombinePaths()
 static int16_t
 GetOperandCount(int16_t op)
 {
-    int16_t count = 0;
+    int16_t count;
 
     if (op < ESCVAL)
         switch (op) {
