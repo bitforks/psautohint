@@ -15,7 +15,6 @@
 //#include "hintfile.h"
 #include "bbox.h"
 #include "opcodes.h"
-#include "optable.h"
 #include "transitionalchars.h"
 
 #define MAXDESIGNS 16 /* maximum number of base designs for a multiple master font. */
