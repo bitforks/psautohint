@@ -18,7 +18,6 @@
 #include "optable.h"
 #include "transitionalchars.h"
 
-#define FONTSTKLIMIT 22
 #define MAXDESIGNS 16 /* maximum number of base designs for a multiple master font. */
 
 extern double atan2(double, double);
@@ -27,9 +26,10 @@ extern double atan2(double, double);
 
 #if 0
 #define DMIN 50 /* device minimum (one-half of a device pixel) */
+#define GROWBUFF 2048 /* Amount to grow output buffer, if necessary. */
+#define FONTSTKLIMIT 22
 #endif          // !AC_C_LIB
 #define MAINHINTS -1
-#define GROWBUFF 2048 /* Amount to grow output buffer, if necessary. */
 /* The following definitions are used when determining
  if a hinting operator used the start, end, average or
  flattened coordinate values. */
@@ -49,23 +49,19 @@ char* currentChar; /* name of the current char for error messages */
 
 #if 0
 static bool firstMT;
+static Cd* refPtArray = NULL;
+static char outstr[100];
 #endif // !AC_C_LIB
 static char *startbuff, **outbuff;
 static int16_t dirCount, byteCount, buffSize;
 static PPathList pathlist = NULL;
-static Cd* refPtArray = NULL;
 static indx hintsdirIx;
-static char outstr[100];
 
 /* Prototypes */
 static void AddLine(indx, indx);
-static bool CheckFlexOK(indx);
 static bool ChangetoCurve(indx, indx);
-static void CheckFlexValues(int16_t*, indx, indx, bool*, bool*);
 static void CheckForZeroLengthCP(void);
 static void CheckHandVStem3(void);
-static void CombinePaths(void);
-static void Ct(Cd, Cd, Cd, indx, int16_t);
 static bool CurveBBox(indx, int16_t, int32_t, Fixed*);
 static void FindHandVStem3(PHintElt*, indx, bool*);
 static void FreePathElements(indx, indx);
@@ -73,32 +69,21 @@ static void GetCoordFromType(int16_t, Cd*, indx, indx);
 static int32_t GetCPIx(indx, int32_t);
 static void GetEndPoint1(indx, int32_t, Fixed*, Fixed*);
 static void GetEndPoints1(indx, int32_t, Cd*, Cd*);
-static void GetFlexCoord(indx, indx, indx, Cd*);
 static void GetPathType(int16_t, char*);
 static int16_t GetPointType(int16_t, Fixed, int32_t*);
 static void GetRelPos(int32_t, int16_t, Fixed, Cd*, Cd*, Fixed*);
 static void GetRelativePosition(Fixed, Fixed, Fixed, Fixed, Fixed, Fixed*);
-static void Hvct(Cd, Cd, Cd, indx, int16_t);
 static void InconsistentPathType(char*, indx, int16_t, int16_t, indx);
 static void InconsistentPointCount(char*, indx, int, int);
 static void InsertHint(PHintElt, indx, int16_t, int16_t);
-static void MtorDt(Cd, indx, int16_t);
-static void OptimizeCT(indx);
-static void OptimizeMtorDt(indx, int16_t*, bool*, bool*);
 static void ReadHints(PHintElt, indx);
 static int ReadandAssignHints(void);
 static void ReadHorVStem3Values(indx, int16_t, int16_t, bool*);
-static void Vhct(Cd, Cd, Cd, indx, int16_t);
-static void WriteFlex(indx);
-static void WriteHints(indx);
-static void WritePathElt(indx, indx, int16_t, indx, int16_t);
-static void WriteSbandWidth(void);
-static void WriteX(Fixed);
-static void WriteY(Fixed);
-static void WriteToBuffer(void);
 static bool ZeroLengthCP(indx, indx);
+#if 0
 static int16_t GetOperandCount(int16_t);
 static void GetLengthandSubrIx(int16_t, int16_t*, int16_t*);
+#endif
 
 static void
 GetMasterDirName(char* dirname, indx ix)
@@ -114,13 +99,15 @@ GetMasterDirName(char* dirname, indx ix)
 #define FRnd(x) ((int32_t)(((x) + (1 << 7)) & ~0xFF))
 #define FTrunc8(x) ((int32_t)((x) >> 8))
 #define FixedToDouble(x) ((double)((x) / 256.0))
-#define Frac(x) ((x)&0xFF)
 #define FixOne (0x100)
 #define FixHalf (0x80)
 #define TFMX(x) ((x))
 #define TFMY(y) (-(y))
 #define ITFMX(x) ((x))
 #define ITFMY(y) (-(y))
+
+#if 0
+#define Frac(x) ((x)&0xFF)
 #define WRTNUM(i)                                                              \
     {                                                                          \
         sprintf(outstr, "%d ", (int)(i));                                      \
@@ -139,7 +126,7 @@ GetMasterDirName(char* dirname, indx ix)
 
 /* Checks if buffer needs to grow before writing out string. */
 static void
-WriteToBuffer()
+WriteToBuffer(void)
 {
     int len = (int)strlen(outstr);
 
@@ -190,6 +177,7 @@ WriteOneHintVal(Fixed val)
         WriteStr("100 div ");
     }
 }
+#endif
 
 /* Locates the first CP following the given path element. */
 static int32_t
@@ -671,7 +659,7 @@ AddLineCube(indx dirIx, indx pathIx)
  slack for the arithmetic errors and avoids the spike problem.
  */
 static void
-CheckForZeroLengthCP()
+CheckForZeroLengthCP(void)
 {
     indx ix, pathIx;
 
@@ -787,8 +775,9 @@ SetSbandWidth(bool fortransit, Transitions* trptr,
     }
 }
 
+#if 0
 static void
-WriteSbandWidth()
+WriteSbandWidth(void)
 {
     int16_t subrix, length, opcount = GetOperandCount(SBX);
     indx ix, j, startix = 0;
@@ -847,6 +836,7 @@ WriteSbandWidth()
     }
     WriteStr("sbx\n");
 }
+#endif
 
 static bool
 CurveBBox(indx dirIx, int16_t hinttype, int32_t pathIx, Fixed* value)
@@ -1288,7 +1278,7 @@ ReadHints(PHintElt hintElt, indx pathEltIx)
 /* Reads hints from hints directory path list and assigns corresponding
  hints to other designs. */
 static int
-ReadandAssignHints()
+ReadandAssignHints(void)
 {
     indx ix;
 
@@ -1305,6 +1295,7 @@ ReadandAssignHints()
     return 0;
 }
 
+#if 0
 static bool
 DoubleCheckFlexVals(indx dirnum, indx eltix, indx hintdirnum)
 {
@@ -1480,6 +1471,7 @@ Ct(Cd coord1, Cd coord2, Cd coord3, indx startix, int16_t length)
                 break;
         }
 }
+#endif
 
 static void
 ReadHorVStem3Values(indx pathIx, int16_t eltno, int16_t hinttype,
@@ -1596,7 +1588,7 @@ FindHandVStem3(PHintElt* hintElt, indx pathIx, bool* errormsg)
 }
 
 static void
-CheckHandVStem3()
+CheckHandVStem3(void)
 {
     indx ix;
     bool errormsg = true;
@@ -1606,6 +1598,7 @@ CheckHandVStem3()
         FindHandVStem3(&pathlist[hintsdirIx].path[ix].hints, ix, &errormsg);
 }
 
+#if 0
 static void
 CheckFlexValues(int16_t* operator, indx eltix, indx flexix, bool* xequal,
                 bool* yequal)
@@ -2108,12 +2101,13 @@ SamePathValues(indx eltIx, int16_t op, indx startIx, int16_t length)
     }
     return true;
 }
+#endif
 
 /* Takes multiple path descriptions for the same character name and
  combines them into a single path description using new subroutine
  calls 7 - 11. */
 static void
-CombinePaths()
+CombinePaths(void)
 {
 #if 0
     indx ix, eltix, opix, startIx, dirIx;
@@ -2218,6 +2212,7 @@ CombinePaths()
 #endif /* !AC_C_LIB */
 }
 
+#if 0
 /* Returns number of operands for the given operator. */
 static int16_t
 GetOperandCount(int16_t op)
@@ -2390,6 +2385,7 @@ GetLengthandSubrIx(int16_t opcount, int16_t* length, int16_t* subrIx)
         }
     }
 }
+#endif
 
 /**********
  Normal MM fonts have their dimensionality wired into the subrs.
@@ -2414,6 +2410,7 @@ GetLengthandSubrIx(int16_t opcount, int16_t* length, int16_t* subrIx)
 
  *************/
 
+#if 0
 static void
 SetHintsDir(indx dirIx)
 {
@@ -2425,6 +2422,7 @@ GetHintsDir(void)
 {
     return hintsdirIx;
 }
+#endif
 
 static int
 GetNumAxes(void)
