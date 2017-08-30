@@ -15,7 +15,7 @@
 #include "memory.h"
 
 int32_t gPathEntries = 0; /* number of elements in a character path */
-bool gAddHints = true;     /* whether to include hints in the font */
+bool gAddHints = true;    /* whether to include hints in the font */
 
 #define MAXPATHELT 100 /* initial maximum number of path elements */
 
@@ -59,6 +59,18 @@ AppendCharPathElement(int pathtype)
     currPathList->path[gPathEntries].type = pathtype;
     gPathEntries++;
     return (&currPathList->path[gPathEntries - 1]);
+}
+
+/* Called from CompareCharPaths when a new character is being read. */
+void
+ResetMaxPathEntries(void)
+{
+    maxPathEntries = MAXPATHELT;
+}
+
+void SetCurrPathList(plist) PPathList plist;
+{
+    currPathList = plist;
 }
 
 void

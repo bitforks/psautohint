@@ -317,6 +317,7 @@ bool NoBlueChar(void);
 int32_t SolEolCharCode(void);
 bool SpecialSolEol(void);
 bool MoveToNewClrs(void);
+bool GetInflectionPoint(Fixed, Fixed, Fixed, Fixed, Fixed, Fixed, Fixed, Fixed, Fixed *);
 void CheckSmooth(void);
 void CheckBBoxEdge(PPathElt e, bool vrt, Fixed lc, Fixed* pf, Fixed* pl);
 bool CheckSmoothness(Fixed x0, Fixed cy0, Fixed x1, Fixed cy1, Fixed x2,

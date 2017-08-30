@@ -47,6 +47,9 @@ typedef int indx;		/* for indexes that could be either short or
 #define NUMMIN(a, b) ((a) <= (b) ? (a) : (b))
 #define NUMMAX(a, b) ((a) >= (b) ? (a) : (b))
 
+/* Round the same way as PS. i.e. -6.5 ==> -6.0 */
+#define LROUND(a) ((a > 0) ? (int32_t)(a + 0.5) : ((a + (int32_t)(-a)) == -0.5) ? (int32_t) a : (int32_t)(a - 0.5))
+
 #define BEZDIR "bez"
 
 #ifdef MAXPATHLEN

@@ -41,6 +41,10 @@ extern bool gAddHints;  /* whether to include hints in the font */
 
 PCharPathElt AppendCharPathElement(int);
 
+void ResetMaxPathEntries(void);
+
+void SetCurrPathList(PPathList);
+
 void SetHintsElt(int16_t, CdPtr, int32_t, int32_t, bool);
 
 void SetNoHints(void);

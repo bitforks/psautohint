@@ -22,6 +22,10 @@ CFLAGS = \
 	-Wstrict-prototypes \
 	-Wunused-macros \
 	-Wmissing-prototypes \
+    -Wno-maybe-uninitialized \
+    -Wno-unused-parameter \
+    -Wno-missing-prototypes \
+    -Wno-unused-function \
 	-O3 \
 	$(NULL)
 
