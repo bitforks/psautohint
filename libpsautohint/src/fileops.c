@@ -8,8 +8,8 @@
  */
 
 #ifdef _WIN32
-#include <windows.h>
 #include <direct.h>
+#include <windows.h>
 #define getcwd _getcwd
 static char Delimiter[] = "\\";
 #else
@@ -28,7 +28,7 @@ static char Delimiter[] = "/";
 
 static char subsetPath[MAXPATHLEN];
 static char subsetname[MAXPATHLEN];
-static int16_t total_inputdirs = 1;  /* number of input directories           */
+static int16_t total_inputdirs = 1; /* number of input directories           */
 static int32_t MaxBytes;
 char globmsg[MAXMSGLEN + 1]; /* used to format messages               */
 static char initialWorkingDir[MAXPATHLEN];
@@ -42,7 +42,7 @@ typedef struct
 
 extern bool multiplemaster; /* from buildfont.c */
 
-int16_t strindex(char *s, char *t) /* return index of t in s, -1 if none    */
+int16_t strindex(char* s, char* t) /* return index of t in s, -1 if none    */
 {
     indx i, n;
 
@@ -54,8 +54,8 @@ int16_t strindex(char *s, char *t) /* return index of t in s, -1 if none    */
 }
 
 /* Returns the full name of the input directory. */
-static void GetInputDirName(char* name,
-char* suffix)
+static void
+GetInputDirName(char* name, char* suffix)
 {
     char currdir[MAXPATHLEN];
 
@@ -94,14 +94,16 @@ ACOpenFile(char* filename, char* access, int16_t severity)
     return (stream);
 }
 
-void FileNameLenOK(char* filename)
+void
+FileNameLenOK(char* filename)
 {
     if (strlen(filename) >= MAXFILENAME) {
         LogMsg(LOGERROR, FATALERROR, filename, (int)MAXFILENAME);
     }
 }
 
-void CharNameLenOK(char* charname)
+void
+CharNameLenOK(char* charname)
 {
     if (strlen(charname) >= MAXCHARNAME) {
         LogMsg(LOGERROR, FATALERROR,
@@ -110,7 +112,8 @@ void CharNameLenOK(char* charname)
     }
 }
 
-void PathNameLenOK(char* pathname)
+void
+PathNameLenOK(char* pathname)
 {
     if (strlen(pathname) >= MAXPATHLEN) {
         LogMsg(LOGERROR, FATALERROR,
@@ -119,7 +122,8 @@ void PathNameLenOK(char* pathname)
     }
 }
 
-bool BAKFile(char* filename)
+bool
+BAKFile(char* filename)
 {
     int16_t length = (int16_t)strlen(filename);
     if (length <= 4)
@@ -135,7 +139,8 @@ GetMaxBytes(void)
     return MaxBytes;
 }
 
-void SetMaxBytes(int32_t value)
+void
+SetMaxBytes(int32_t value)
 {
     MaxBytes = value;
 }

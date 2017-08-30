@@ -13,11 +13,11 @@
 #include "buildfont.h"
 //#include "chartable.h"
 //#include "hintfile.h"
+#include "bbox.h"
 #include "masterfont.h"
 #include "opcodes.h"
 #include "optable.h"
 #include "transitionalchars.h"
-#include "bbox.h"
 
 #define FONTSTKLIMIT 22
 
@@ -27,7 +27,7 @@ extern double atan2(double, double);
 
 #if 0
 #define DMIN 50 /* device minimum (one-half of a device pixel) */
-#endif // !AC_C_LIB
+#endif          // !AC_C_LIB
 #define MAINHINTS -1
 #define GROWBUFF 2048 /* Amount to grow output buffer, if necessary. */
 /* The following definitions are used when determining
