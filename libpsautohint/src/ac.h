@@ -51,6 +51,12 @@
 
 /* structures */
 
+/* character bounding box */
+typedef struct Bbox
+   {
+   int32_t llx, lly, urx, ury;
+   } Bbox, *BboxPtr;
+
 /* character point coordinates */
 typedef struct
    {

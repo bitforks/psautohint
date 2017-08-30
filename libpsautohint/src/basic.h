@@ -47,4 +47,16 @@ typedef int indx;		/* for indexes that could be either short or
 #define NUMMIN(a, b) ((a) <= (b) ? (a) : (b))
 #define NUMMAX(a, b) ((a) >= (b) ? (a) : (b))
 
+#define BEZDIR "bez"
+
+#ifdef MAXPATHLEN
+#undef MAXPATHLEN
+#endif
+#define MAXPATHLEN 1024        /* max path name len for a dir or folder
+                                  (includes 1 byte for null terminator) */
+
+#ifndef MAXINT
+#define MAXINT                   32767
+#endif
+
 #endif /*BASIC_H*/
