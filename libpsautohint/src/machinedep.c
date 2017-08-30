@@ -550,7 +550,7 @@ char *ibmfontname;
 {
   char *fontinfostr;
 
-  if ((fontinfostr = GetFntInfo("PCFileNamePrefix", ACOPTIONAL)) == NULL)
+  if ((fontinfostr = GetFontInfo("PCFileNamePrefix", ACOPTIONAL)) == NULL)
     strcpy(ibmfontname, ibmfilename);
   else
   {
@@ -571,7 +571,7 @@ char *macfontname;
 {
   char *fontinfostr, *fontname;
 
-  fontinfostr = GetFntInfo("FontName", MANDATORY);
+  fontinfostr = GetFontInfo("FontName", MANDATORY);
   fontname = printer_filename(fontinfostr);
   strcpy(macfontname, fontname);
   FreeFontInfo(fontinfostr);

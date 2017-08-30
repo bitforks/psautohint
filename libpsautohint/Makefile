@@ -56,6 +56,7 @@ LIB_OBJS = \
 	$(OBJ_DIR)/src/fix.o \
 	$(OBJ_DIR)/src/flat.o \
 	$(OBJ_DIR)/src/fontinfo.o \
+	$(OBJ_DIR)/src/fileops.o \
 	$(OBJ_DIR)/src/gen.o \
 	$(OBJ_DIR)/src/head.o \
 	$(OBJ_DIR)/src/logging.o \
