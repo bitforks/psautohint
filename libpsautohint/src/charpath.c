@@ -88,7 +88,6 @@ static void OptimizeMtorDt(indx, int16_t*, bool*, bool*);
 static void ReadHints(PHintElt, indx);
 static int ReadandAssignHints(void);
 static void ReadHorVStem3Values(indx, int16_t, int16_t, bool*);
-static void SetSbandWidth(char*, bool, Transitions*, int);
 static void Vhct(Cd, Cd, Cd, indx, int16_t);
 static void WriteFlex(indx);
 static void WriteHints(indx);
@@ -104,6 +103,7 @@ static void GetLengthandSubrIx(int16_t, int16_t*, int16_t*);
 void
 GetMasterDirName(char* dirname, indx ix)
 {
+    (void)ix;
     if (dirname)
         dirname[0] = '\0';
 }
@@ -524,6 +524,8 @@ BestLine(PCharPathElt start, PCharPathElt end, Fixed* dx, Fixed* dy)
     double cx = FixedToDouble(end->x2 - end->x3);
     double cy = FixedToDouble(end->y2 - end->y3);
 
+    (void)start;
+
     *dx = *dy = 0;
 
     if (cy == 0.0 && cx == 0.0) {
@@ -767,7 +769,7 @@ CompareCharPaths(const ACFontInfo* fontinfo, char* filename)
 }
 
 static void
-SetSbandWidth(char* charname, bool fortransit, Transitions* trptr,
+SetSbandWidth(bool fortransit, Transitions* trptr,
               int trgroupnum)
 {
     indx dirix;
@@ -1728,6 +1730,7 @@ GetFlexCoord(indx rmtCt, indx dirix, indx eltix, Cd* coord)
 static void
 WriteFlex(indx eltix)
 {
+    (void)eltix;
 #if 0
     bool vert = (pathlist[hintsdirIx].path[eltix].x ==
                  pathlist[hintsdirIx].path[eltix + 1].x3);
@@ -2411,25 +2414,25 @@ GetLengthandSubrIx(int16_t opcount, int16_t* length, int16_t* subrIx)
 
  *************/
 
-void
+static void
 SetHintsDir(indx dirIx)
 {
     hintsdirIx = dirIx;
 }
 
-int
+static int
 GetHintsDir(void)
 {
     return hintsdirIx;
 }
 
-int
+static int
 GetNumAxes(void)
 {
     return 1;
 }
 
-bool
+static bool
 MergeCharPaths(const ACFontInfo* fontinfo, char** outbuffer, char* charname,
                char* filename, bool fortransit, Transitions* tr, int trgroupnum)
 {
@@ -2485,7 +2488,7 @@ MergeCharPaths(const ACFontInfo* fontinfo, char** outbuffer, char* charname,
     ok = CompareCharPaths(fontinfo, filename);
     if (ok) {
         CheckForZeroLengthCP();
-        SetSbandWidth(charname, fortransit, tr, trgroupnum);
+        SetSbandWidth(fortransit, tr, trgroupnum);
         if (gAddHints && hintsdirIx >= 0 && gPathEntries > 0) {
             if (ReadandAssignHints()) {
                 LogMsg(LOGERROR, FATALERROR,

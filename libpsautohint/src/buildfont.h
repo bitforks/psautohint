@@ -324,19 +324,4 @@ init_working_dir(void);
 void
 set_working_dir(void);
 
-void
-LoadSubsetData(void);
-
-void
-SetSubsetName(char *name);
-
-char *
-GetSubsetName(void);
-
-char *
-GetSubsetPath(void);
-
-bool
-UsesSubset(void);
-
 #endif /*BUILDFONT_H*/

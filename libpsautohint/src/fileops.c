@@ -26,13 +26,8 @@ static char Delimiter[] = "/";
 
 #define BAKSUFFIX ".BAK"
 
-static char subsetPath[MAXPATHLEN];
-static char subsetname[MAXPATHLEN];
 static int16_t total_inputdirs = 1; /* number of input directories           */
 static int32_t MaxBytes;
-char globmsg[MAXMSGLEN + 1]; /* used to format messages               */
-static char initialWorkingDir[MAXPATHLEN];
-static int initialWorkingDirLength;
 
 typedef struct
 {
@@ -145,79 +140,6 @@ SetMaxBytes(int32_t value)
     MaxBytes = value;
 }
 
-#define INCREMENT 3
-static SubsetData* subsetdata = NULL;
-static int allocation = INCREMENT;
-static int allocated = 0;
-static bool usesSubset = false;
-
-bool
-UsesSubset(void)
-{
-    return usesSubset;
-}
-
-void
-SetSubsetName(char* name)
-{
-    strcpy(subsetname, name);
-    subsetdata =
-      (SubsetData*)AllocateMem(INCREMENT, sizeof(SubsetData), "SetSubsetName");
-    usesSubset = true;
-}
-
-char*
-GetSubsetName(void)
-{
-    return (subsetname);
-}
-
-char*
-GetSubsetPath(void)
-{
-    return (subsetPath);
-}
-
-void
-LoadSubsetData(void)
-{
-    FILE* fp = ACOpenFile(subsetPath, "r", OPENERROR);
-    int lo;
-    int hi;
-    int scanned;
-
-    while ((scanned = fscanf(fp, "%d-%d", &lo, &hi)) > 0) {
-        if (scanned == 1)
-            subsetdata[allocated].lo = subsetdata[allocated].hi = lo;
-        else {
-            subsetdata[allocated].lo = lo;
-            subsetdata[allocated].hi = hi;
-        }
-
-        if (++allocated >= allocation) {
-            allocation += INCREMENT;
-            subsetdata = (SubsetData*)ReallocateMem(
-              (char*)subsetdata, allocation * sizeof(SubsetData),
-              "LoadSubsetData");
-        }
-    }
-
-    fclose(fp);
-}
-
-bool
-InSubsetData(int cid)
-{
-    int i;
-
-    for (i = 0; i < allocated; i++) {
-        if ((cid >= subsetdata[i].lo) && (cid <= subsetdata[i].hi))
-            return true;
-    }
-
-    return false;
-}
-
 int16_t
 GetTotalInputDirs(void)
 {
@@ -228,22 +150,4 @@ void
 SetTotalInputDirs(int16_t total)
 {
     total_inputdirs = total;
-}
-
-bool
-IsHintRowMatch(char* hintDirName, char* rowDirName)
-{
-    char fontDirName[MAXPATHLEN];
-    int fontDirLength;
-
-    /**************************************************************************/
-    /* It is necessary to concatenate the hintDirName and rowDirName when     */
-    /* doing comparisons because each of these may involve multiple path      */
-    /* components: a/b and x/y/z -> a/b/x/y/z                                 */
-    /**************************************************************************/
-    sprintf(fontDirName, "%s/%s/", hintDirName, rowDirName);
-    fontDirLength = (int)strlen(fontDirName);
-    return ((initialWorkingDirLength >= fontDirLength) &&
-            (strcmp(initialWorkingDir + initialWorkingDirLength - fontDirLength,
-                    fontDirName) == 0));
 }
