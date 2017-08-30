@@ -11,7 +11,6 @@ This license is available at: http://opensource.org/licenses/Apache-2.0. */
 #include "buildfont.h"
 //#include "chartable.h"
 //#include "hintfile.h"
-#include "machinedep.h"
 #include "masterfont.h"
 #include "opcodes.h"
 #include "optable.h"
@@ -2481,7 +2480,8 @@ MergeCharPaths(const ACFontInfo* fontinfo, char** outbuffer, char* charname,
         }
     }
 
-    if (ok = CompareCharPaths(fontinfo, filename)) {
+    ok = CompareCharPaths(fontinfo, filename);
+    if (ok) {
         CheckForZeroLengthCP();
         SetSbandWidth(charname, fortransit, tr, trgroupnum);
         if (gAddHints && hintsdirIx >= 0 && gPathEntries > 0) {

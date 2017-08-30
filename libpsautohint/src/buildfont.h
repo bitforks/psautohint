@@ -291,9 +291,6 @@ CharNameLenOK(char *);
 void
 PathNameLenOK(char *);
 
-uint32_t
-CheckFileBufferLen(char **, char *);
-
 void
 WriteBlendEntry(FILE *, char *, char *, bool);
 

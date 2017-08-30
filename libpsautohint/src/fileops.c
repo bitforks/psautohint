@@ -4,13 +4,22 @@ This software is licensed as OpenSource, under the Apache License, Version 2.0.
 This license is available at: http://opensource.org/licenses/Apache-2.0. */
 /***********************************************************************/
 
+#ifdef _WIN32
+#include <windows.h>
+#include <direct.h>
+#define getcwd _getcwd
+static char Delimiter[] = "\\";
+#else
+#include <unistd.h>
+static char Delimiter[] = "/";
+#endif
+
 #include "ac.h"
 //#include "afmcharsetdefs.h"
 #include "buildfont.h"
 #include "charpath.h"
 //#include "cryptdefs.h"
 #include "fontinfo.h"
-#include "machinedep.h"
 
 #define BAKSUFFIX ".BAK"
 
@@ -41,20 +50,14 @@ int16_t strindex(char *s, char *t) /* return index of t in s, -1 if none    */
     return -1;
 }
 
-uint32_t CheckFileBufferLen(char **buffer, char *filename)
+/* Returns the full name of the input directory. */
+static void GetInputDirName(char* name,
+char* suffix)
 {
-    int32_t filelen;
+    char currdir[MAXPATHLEN];
 
-    filelen = ACGetFileSize(filename);
-    if (filelen > MaxBytes) { /* renner Tue Sep 11 14:59:37 1990 */
-#if 0
-    fprintf(stderr,"Calling realloc: %d vs %d\n", filelen, MaxBytes); fflush(stderr);
-#endif
-        MaxBytes = filelen + 5;
-        *buffer = (char*)ReallocateMem(
-          *buffer, (unsigned)(MaxBytes * sizeof(char)), "file buffer");
-    }
-    return filelen;
+    getcwd(currdir, MAXPATHLEN);
+    sprintf(name, "%s%s%s", currdir, Delimiter, suffix);
 }
 
 /* ACOpenFile tries to open a file with the access attribute
