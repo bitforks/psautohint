@@ -57,28 +57,7 @@ static PPathList pathlist = NULL;
 static indx hintsdirIx;
 
 /* Prototypes */
-static void AddLine(indx, indx);
-static bool ChangetoCurve(indx, indx);
-static void CheckForZeroLengthCP(void);
-static void CheckHandVStem3(void);
-static bool CurveBBox(indx, int16_t, int32_t, Fixed*);
-static void FindHandVStem3(PHintElt*, indx, bool*);
-static void FreePathElements(indx, indx);
-static void GetCoordFromType(int16_t, Cd*, indx, indx);
-static int32_t GetCPIx(indx, int32_t);
-static void GetEndPoint1(indx, int32_t, Fixed*, Fixed*);
-static void GetEndPoints1(indx, int32_t, Cd*, Cd*);
-static void GetPathType(int16_t, char*);
-static int16_t GetPointType(int16_t, Fixed, int32_t*);
-static void GetRelPos(int32_t, int16_t, Fixed, Cd*, Cd*, Fixed*);
 static void GetRelativePosition(Fixed, Fixed, Fixed, Fixed, Fixed, Fixed*);
-static void InconsistentPathType(char*, indx, int16_t, int16_t, indx);
-static void InconsistentPointCount(char*, indx, int, int);
-static void InsertHint(PHintElt, indx, int16_t, int16_t);
-static void ReadHints(PHintElt, indx);
-static int ReadandAssignHints(void);
-static void ReadHorVStem3Values(indx, int16_t, int16_t, bool*);
-static bool ZeroLengthCP(indx, indx);
 #if 0
 static int16_t GetOperandCount(int16_t);
 static void GetLengthandSubrIx(int16_t, int16_t*, int16_t*);
@@ -308,7 +287,8 @@ GetPathType(int16_t pathtype, char* str)
     }
 }
 
-static void FreePathElements(startix, stopix) indx startix, stopix;
+static void
+FreePathElements(indx startix, indx stopix)
 {
     indx j;
 
