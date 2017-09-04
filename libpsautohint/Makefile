@@ -59,6 +59,7 @@ LIB_OBJS = \
 	$(OBJ_DIR)/src/memory.o \
 	$(OBJ_DIR)/src/merge.o \
 	$(OBJ_DIR)/src/misc.o \
+	$(OBJ_DIR)/src/optable.o \
 	$(OBJ_DIR)/src/pick.o \
 	$(OBJ_DIR)/src/psautohint.o \
 	$(OBJ_DIR)/src/read.o \

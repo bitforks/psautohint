@@ -15,19 +15,24 @@
 //#include "hintfile.h"
 #include "bbox.h"
 #include "opcodes.h"
+#include "optable.h"
 #include "transitionalchars.h"
 
-#define MAXDESIGNS 16 /* maximum number of base designs for a multiple master font. */
+#define IS_LIB 0
+
+/* maximum number of base designs for a multiple master font. */
+#define MAXDESIGNS 16
 
 extern double atan2(double, double);
 
 #define DEBUG_PCP 0 /* debug point closepath */
 
-#if 0
-#define DMIN 50 /* device minimum (one-half of a device pixel) */
+#if !IS_LIB
+#define DMIN 50       /* device minimum (one-half of a device pixel) */
 #define GROWBUFF 2048 /* Amount to grow output buffer, if necessary. */
 #define FONTSTKLIMIT 22
-#endif          // !AC_C_LIB
+#endif
+
 #define MAINHINTS -1
 /* The following definitions are used when determining
  if a hinting operator used the start, end, average or
@@ -46,11 +51,11 @@ bool cubeLibrary;
 bool bereallyQuiet = 1;
 char* currentChar; /* name of the current char for error messages */
 
-#if 0
+#if !IS_LIB
 static bool firstMT;
 static Cd* refPtArray = NULL;
 static char outstr[100];
-#endif // !AC_C_LIB
+#endif
 static char *startbuff, **outbuff;
 static int16_t dirCount, byteCount, buffSize;
 static PPathList pathlist = NULL;
@@ -58,7 +63,7 @@ static indx hintsdirIx;
 
 /* Prototypes */
 static void GetRelativePosition(Fixed, Fixed, Fixed, Fixed, Fixed, Fixed*);
-#if 0
+#if !IS_LIB
 static int16_t GetOperandCount(int16_t);
 static void GetLengthandSubrIx(int16_t, int16_t*, int16_t*);
 #endif
@@ -84,7 +89,7 @@ GetMasterDirName(char* dirname, indx ix)
 #define ITFMX(x) ((x))
 #define ITFMY(y) (-(y))
 
-#if 0
+#if !IS_LIB
 #define Frac(x) ((x)&0xFF)
 #define WRTNUM(i)                                                              \
     {                                                                          \
@@ -736,8 +741,7 @@ CompareCharPaths(const ACFontInfo* fontinfo, char* filename)
 }
 
 static void
-SetSbandWidth(bool fortransit, Transitions* trptr,
-              int trgroupnum)
+SetSbandWidth(bool fortransit, Transitions* trptr, int trgroupnum)
 {
     indx dirix;
 
@@ -754,7 +758,7 @@ SetSbandWidth(bool fortransit, Transitions* trptr,
     }
 }
 
-#if 0
+#if !IS_LIB
 static void
 WriteSbandWidth(void)
 {
@@ -1274,7 +1278,7 @@ ReadandAssignHints(void)
     return 0;
 }
 
-#if 0
+#if !IS_LIB
 static bool
 DoubleCheckFlexVals(indx dirnum, indx eltix, indx hintdirnum)
 {
@@ -1577,7 +1581,7 @@ CheckHandVStem3(void)
         FindHandVStem3(&pathlist[hintsdirIx].path[ix].hints, ix, &errormsg);
 }
 
-#if 0
+#if !IS_LIB
 static void
 CheckFlexValues(int16_t* operator, indx eltix, indx flexix, bool* xequal,
                 bool* yequal)
@@ -1703,7 +1707,7 @@ static void
 WriteFlex(indx eltix)
 {
     (void)eltix;
-#if 0
+#if !IS_LIB
     bool vert = (pathlist[hintsdirIx].path[eltix].x ==
                  pathlist[hintsdirIx].path[eltix + 1].x3);
     Cd coord, coord0; /* array of reference points */
@@ -1806,8 +1810,7 @@ WriteFlex(indx eltix)
     WriteStr("0 subr\n");
     flexexists = true;
     UnallocateMem(refPtArray);
-
-#endif /* !AC_C_LIB */
+#endif
 }
 
 static void
@@ -2088,7 +2091,7 @@ SamePathValues(indx eltIx, int16_t op, indx startIx, int16_t length)
 static void
 CombinePaths(void)
 {
-#if 0
+#if !IS_LIB
     indx ix, eltix, opix, startIx, dirIx;
     int16_t length, subrIx, opcount, op;
     char operator[MAXOPLEN];
@@ -2188,10 +2191,10 @@ CombinePaths(void)
         WriteStr(operator);
     } /* end of for eltix */
     WriteStr("ed\n");
-#endif /* !AC_C_LIB */
+#endif
 }
 
-#if 0
+#if !IS_LIB
 /* Returns number of operands for the given operator. */
 static int16_t
 GetOperandCount(int16_t op)
