@@ -1706,7 +1706,6 @@ GetFlexCoord(indx rmtCt, indx dirix, indx eltix, Cd* coord)
 static void
 WriteFlex(indx eltix)
 {
-    (void)eltix;
 #if !IS_LIB
     bool vert = (pathlist[hintsdirIx].path[eltix].x ==
                  pathlist[hintsdirIx].path[eltix + 1].x3);
@@ -1810,6 +1809,8 @@ WriteFlex(indx eltix)
     WriteStr("0 subr\n");
     flexexists = true;
     UnallocateMem(refPtArray);
+#else
+    (void)eltix;
 #endif
 }
 
