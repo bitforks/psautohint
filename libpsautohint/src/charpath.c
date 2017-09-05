@@ -23,8 +23,6 @@
 /* maximum number of base designs for a multiple master font. */
 #define MAXDESIGNS 16
 
-extern double atan2(double, double);
-
 #define DEBUG_PCP 0 /* debug point closepath */
 
 #if !IS_LIB
