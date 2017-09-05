@@ -20,9 +20,6 @@
 
 #define IS_LIB 0
 
-/* maximum number of base designs for a multiple master font. */
-#define MAXDESIGNS 16
-
 #define DEBUG_PCP 0 /* debug point closepath */
 
 #if !IS_LIB
@@ -47,7 +44,7 @@ bool flexexists;
 extern bool multiplemaster;
 bool cubeLibrary;
 bool bereallyQuiet = 1;
-char* currentChar; /* name of the current char for error messages */
+#define currentChar gGlyphName
 
 #if !IS_LIB
 static bool firstMT;
@@ -322,7 +319,7 @@ FreePathElements(indx startix, indx stopix)
 }
 
 static void
-InconsistentPointCount(char* filename, indx ix, int entries1, int entries2)
+InconsistentPointCount(indx ix, int entries1, int entries2)
 {
     char pathdir1[MAXPATHLEN], pathdir2[MAXPATHLEN];
 
@@ -331,12 +328,11 @@ InconsistentPointCount(char* filename, indx ix, int entries1, int entries2)
     LogMsg(WARNING, OK, "The character: %s will not be included in the font\n  "
                         "because the version in %s has a total of %d elements "
                         "and\n  the one in %s has %d elements.\n",
-           filename, pathdir1, (int)entries1, pathdir2, (int)entries2);
+           gGlyphName, pathdir1, (int)entries1, pathdir2, (int)entries2);
 }
 
 static void
-InconsistentPathType(char* filename, indx ix, int16_t type1, int16_t type2,
-                     indx eltno)
+InconsistentPathType(indx ix, int16_t type1, int16_t type2, indx eltno)
 {
     char pathdir1[MAXPATHLEN], pathdir2[MAXPATHLEN];
     char typestr1[10], typestr2[10];
@@ -352,8 +348,8 @@ InconsistentPathType(char* filename, indx ix, int16_t type1, int16_t type2,
            "The character: %s will not be included in the font\n  "
            "because the version in %s has path type %s at coord: %d "
            "%d\n  and the one in %s has type %s at coord %d %d.\n",
-           filename, pathdir1, typestr1, (int)coord1.x, (int)coord1.y, pathdir2,
-           typestr2, (int)coord2.x, (int)coord2.y);
+           gGlyphName, pathdir1, typestr1, (int)coord1.x, (int)coord1.y,
+           pathdir2, typestr2, (int)coord2.x, (int)coord2.y);
 }
 
 /* Returns whether changing the line to a curve is successful. */
@@ -658,23 +654,11 @@ CheckForZeroLengthCP(void)
     }
 }
 
-typedef struct path_names_
-{
-    char dirnam[MAXPATHLEN];
-    char fullfilepath[MAXPATHLEN];
-} Path_Name_;
-
-#if !IS_LIB
-static Path_Name_ Path_Names[MAXDESIGNS];
-#else
-static Path_Name_ Path_Names[1];
-#endif
-
 /* Checks that character paths for multiple masters have the same
  number of points and in the same path order.  If this isn't the
  case the character is not included in the font. */
 static bool
-CompareCharPaths(const ACFontInfo* fontinfo, char* filename)
+CompareCharPaths(const ACFontInfo* fontinfo, char** glyphs)
 {
     indx dirix, ix, i;
     int32_t totalPathElt, minPathLen;
@@ -683,26 +667,23 @@ CompareCharPaths(const ACFontInfo* fontinfo, char* filename)
 
     totalPathElt = minPathLen = MAXINT;
     if (pathlist == NULL) {
-        pathlist = (PPathList)AllocateMem(
-          MAXDESIGNS /*dirCount*/, sizeof(PathList), "character path list");
+        pathlist = (PPathList)AllocateMem(dirCount, sizeof(PathList),
+                                          "character path list");
     }
 
     for (dirix = 0; dirix < dirCount; dirix++) {
-        char* srcglyph = NULL;
-        // FIXME: SetReadFileName(Path_Names[dirix].fullfilepath);
-
         ResetMaxPathEntries();
         SetCurrPathList(&pathlist[dirix]);
         gPathEntries = 0;
 
         /* read char data only */
-        if (!ReadGlyph(fontinfo, srcglyph, true, false))
+        if (!ReadGlyph(fontinfo, glyphs[dirix], true, false))
             return false;
 
         if (dirix == 0)
             totalPathElt = gPathEntries;
         else if (gPathEntries != totalPathElt) {
-            InconsistentPointCount(filename, dirix, totalPathElt, gPathEntries);
+            InconsistentPointCount(dirix, totalPathElt, gPathEntries);
             ok = false;
         }
         minPathLen = NUMMIN(NUMMIN(gPathEntries, totalPathElt), minPathLen);
@@ -724,8 +705,7 @@ CompareCharPaths(const ACFontInfo* fontinfo, char* filename)
                 } else if ((type1 == RCT) && (type2 == RDT))
                     ok = ok && ChangetoCurve(dirix, i);
                 else {
-                    InconsistentPathType(filename, dirix,
-                                         pathlist[0].path[i].type,
+                    InconsistentPathType(dirix, pathlist[0].path[i].type,
                                          pathlist[dirix].path[i].type, i);
                     ok = false;
                     /* skip to next subpath */
@@ -2405,66 +2385,20 @@ GetHintsDir(void)
 }
 #endif
 
-static int
-GetNumAxes(void)
-{
-    return 1;
-}
-
 static bool
-MergeCharPaths(const ACFontInfo* fontinfo, char** outbuffer, char* charname,
-               char* filename, bool fortransit, Transitions* tr, int trgroupnum)
+MergeCharPaths(const ACFontInfo* fontinfo, char** outbuffer, char** srcglyphs,
+               int nmasters, bool fortransit, Transitions* tr, int trgroupnum)
 {
     bool ok;
-    int i, ix;
 
+    dirCount = nmasters;
     byteCount = 1;
     buffSize = GetMaxBytes();
     outbuff = outbuffer;
     startbuff = *outbuffer;
     memset(startbuff, 0, buffSize);
-    currentChar = charname;
 
-#if DEBUG_PCP
-    fprintf(OUTPUTBUFF, "start character %s\n", charname);
-#endif
-
-    if (!fortransit) {
-        dirCount = GetTotalInputDirs();
-        for (i = 0; i < dirCount; i++) {
-            GetMasterDirName(Path_Names[i].dirnam, i);
-            sprintf(Path_Names[i].fullfilepath, "%s/%s/%s",
-                    Path_Names[i].dirnam, BEZDIR, filename);
-        }
-    } else {
-        i = GetNumAxes();
-        switch (i) {
-            case 1:
-                dirCount = 2;
-                break;
-            case 2:
-                dirCount = 4;
-                break;
-            case 3:
-                dirCount = 8;
-                break;
-            case 4:
-                dirCount = 16;
-                break;
-            default:
-                dirCount = 0;
-                break;
-        }
-        for (i = 0; i < dirCount; i++) {
-            strcpy(Path_Names[i].fullfilepath,
-                   tr->transitgrouparray[trgroupnum].assembledfilename[i]);
-            ix = strindex(Path_Names[i].fullfilepath, "/");
-            strncpy(Path_Names[i].dirnam, Path_Names[i].fullfilepath, ix);
-            Path_Names[i].dirnam[ix] = '\0';
-        }
-    }
-
-    ok = CompareCharPaths(fontinfo, filename);
+    ok = CompareCharPaths(fontinfo, srcglyphs);
     if (ok) {
         CheckForZeroLengthCP();
         SetSbandWidth(fortransit, tr, trgroupnum);
@@ -2472,7 +2406,7 @@ MergeCharPaths(const ACFontInfo* fontinfo, char** outbuffer, char* charname,
             if (ReadandAssignHints()) {
                 LogMsg(LOGERROR, FATALERROR,
                        "Path problem in ReadAndAssignHints, character %s.\n",
-                       charname);
+                       gGlyphName);
             }
             CheckHandVStem3();
         }
