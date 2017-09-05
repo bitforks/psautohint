@@ -44,7 +44,6 @@ bool flexexists;
 extern bool multiplemaster;
 bool cubeLibrary;
 bool bereallyQuiet = 1;
-#define currentChar gGlyphName
 
 #if !IS_LIB
 static bool firstMT;
@@ -52,7 +51,7 @@ static Cd* refPtArray = NULL;
 static char outstr[100];
 #endif
 static char *startbuff, **outbuff;
-static int16_t dirCount, byteCount, buffSize;
+static int16_t masterCount, byteCount, buffSize;
 static PPathList pathlist = NULL;
 static indx hintsdirIx;
 
@@ -159,48 +158,48 @@ WriteOneHintVal(Fixed val)
 
 /* Locates the first CP following the given path element. */
 static int32_t
-GetCPIx(indx dirIx, int32_t pathIx)
+GetCPIx(indx mIx, int32_t pathIx)
 {
     indx ix;
 
     for (ix = pathIx; ix < gPathEntries; ix++)
-        if (pathlist[dirIx].path[ix].type == CP)
+        if (pathlist[mIx].path[ix].type == CP)
             return ix;
     LogMsg(LOGERROR, NONFATALERROR, "No closepath in character: %s.\n",
-           currentChar);
+           gGlyphName);
     return (-1);
 }
 
 /* Locates the first MT preceding the given path element. */
 static int
-GetMTIx(indx dirIx, indx pathIx)
+GetMTIx(indx mIx, indx pathIx)
 {
     indx ix;
 
     for (ix = pathIx; ix >= 0; ix--)
-        if (pathlist[dirIx].path[ix].type == RMT)
+        if (pathlist[mIx].path[ix].type == RMT)
             return ix;
     LogMsg(LOGERROR, NONFATALERROR, "No moveto in character: %s.\n",
-           currentChar);
+           gGlyphName);
     return (-1);
 }
 
 /* Locates the first MT SUCCEEDING the given path element. */
 static int
-GetNextMTIx(indx dirIx, indx pathIx)
+GetNextMTIx(indx mIx, indx pathIx)
 {
     indx ix;
 
     for (ix = pathIx; ix < gPathEntries; ix++)
-        if (pathlist[dirIx].path[ix].type == RMT)
+        if (pathlist[mIx].path[ix].type == RMT)
             return ix;
     return (-1);
 }
 
 static void
-GetEndPoint1(indx dirIx, int32_t pathIx, Fixed* ptX, Fixed* ptY)
+GetEndPoint1(indx mIx, int32_t pathIx, Fixed* ptX, Fixed* ptY)
 {
-    PCharPathElt pathElt = &pathlist[dirIx].path[pathIx];
+    PCharPathElt pathElt = &pathlist[mIx].path[pathIx];
 
 retry:
     switch (pathElt->type) {
@@ -215,50 +214,50 @@ retry:
             break;
         case CP:
             while (--pathIx >= 0) {
-                pathElt = &pathlist[dirIx].path[pathIx];
+                pathElt = &pathlist[mIx].path[pathIx];
                 if (pathElt->type == RMT)
                     goto retry;
             }
             LogMsg(LOGERROR, NONFATALERROR,
-                   "Bad character description file: %s.\n", currentChar);
+                   "Bad character description file: %s.\n", gGlyphName);
             break;
         default:
             LogMsg(LOGERROR, NONFATALERROR,
-                   "Illegal operator in character file: %s.\n", currentChar);
+                   "Illegal operator in character file: %s.\n", gGlyphName);
     }
 }
 
 static void
-GetEndPoints1(indx dirIx, int32_t pathIx, Cd* start, Cd* end)
+GetEndPoints1(indx mIx, int32_t pathIx, Cd* start, Cd* end)
 {
-    if (pathlist[dirIx].path[pathIx].type == RMT) {
+    if (pathlist[mIx].path[pathIx].type == RMT) {
         int32_t cpIx;
 
-        GetEndPoint1(dirIx, pathIx, &start->x, &start->y);
+        GetEndPoint1(mIx, pathIx, &start->x, &start->y);
         /* Get index for closepath associated with this moveto. */
-        cpIx = GetCPIx(dirIx, pathIx + 1);
-        GetEndPoint1(dirIx, cpIx - 1, &end->x, &end->y);
+        cpIx = GetCPIx(mIx, pathIx + 1);
+        GetEndPoint1(mIx, cpIx - 1, &end->x, &end->y);
     } else {
-        GetEndPoint1(dirIx, pathIx - 1, &start->x, &start->y);
-        GetEndPoint1(dirIx, pathIx, &end->x, &end->y);
+        GetEndPoint1(mIx, pathIx - 1, &start->x, &start->y);
+        GetEndPoint1(mIx, pathIx, &end->x, &end->y);
     }
 }
 
 static void
-GetCoordFromType(int16_t pathtype, Cd* coord, indx dirix, indx eltno)
+GetCoordFromType(int16_t pathtype, Cd* coord, indx mIx, indx eltno)
 {
     switch (pathtype) {
         case RMT:
         case RDT:
-            (*coord).x = FTrunc8(FRnd(pathlist[dirix].path[eltno].x));
-            (*coord).y = FTrunc8(FRnd(pathlist[dirix].path[eltno].y));
+            (*coord).x = FTrunc8(FRnd(pathlist[mIx].path[eltno].x));
+            (*coord).y = FTrunc8(FRnd(pathlist[mIx].path[eltno].y));
             break;
         case RCT:
-            (*coord).x = FTrunc8(FRnd(pathlist[dirix].path[eltno].x3));
-            (*coord).y = FTrunc8(FRnd(pathlist[dirix].path[eltno].y3));
+            (*coord).x = FTrunc8(FRnd(pathlist[mIx].path[eltno].x3));
+            (*coord).y = FTrunc8(FRnd(pathlist[mIx].path[eltno].y3));
             break;
         case CP:
-            GetCoordFromType(pathlist[dirix].path[eltno - 1].type, coord, dirix,
+            GetCoordFromType(pathlist[mIx].path[eltno - 1].type, coord, mIx,
                              eltno - 1);
             break;
     };
@@ -283,7 +282,7 @@ GetPathType(int16_t pathtype, char* str)
         default:
             LogMsg(LOGERROR, NONFATALERROR,
                    "Illegal path type: %d in character: %s.\n", pathtype,
-                   currentChar);
+                   gGlyphName);
     }
 }
 
@@ -354,17 +353,17 @@ InconsistentPathType(indx ix, int16_t type1, int16_t type2, indx eltno)
 
 /* Returns whether changing the line to a curve is successful. */
 static bool
-ChangetoCurve(indx dirIx, indx pathIx)
+ChangetoCurve(indx mIx, indx pathIx)
 {
     Cd start, end, ctl1, ctl2;
-    PCharPathElt pathElt = &pathlist[dirIx].path[pathIx];
+    PCharPathElt pathElt = &pathlist[mIx].path[pathIx];
 
     if (pathElt->type == RCT)
         return true;
     /* Use the 1/3 rule to convert a line to a curve, i.e. put the control
      points
      1/3 of the total distance from each end point. */
-    GetEndPoints1(dirIx, pathIx, &start, &end);
+    GetEndPoints1(mIx, pathIx, &start, &end);
     ctl1.x = FRnd((start.x * 2 + end.x + FixHalf) / 3);
     ctl1.y = FRnd((start.y * 2 + end.y + FixHalf) / 3);
     ctl2.x = FRnd((end.x * 2 + start.x + FixHalf) / 3);
@@ -386,17 +385,17 @@ ChangetoCurve(indx dirIx, indx pathIx)
 }
 
 static bool
-ZeroLengthCP(indx dirIx, indx pathIx)
+ZeroLengthCP(indx mIx, indx pathIx)
 {
     Cd startPt, endPt;
 
-    GetEndPoints1(dirIx, pathIx, &startPt, &endPt);
+    GetEndPoints1(mIx, pathIx, &startPt, &endPt);
     return (startPt.x == endPt.x && startPt.y == endPt.y);
 }
 
 /* Subtracts or adds one unit from the segment at pathIx. */
 static void
-AddLine(indx dirIx, indx pathIx)
+AddLine(indx mIx, indx pathIx)
 {
     Fixed fixTwo = IntToFix(2);
     Fixed xoffset = 0, yoffset = 0;
@@ -405,65 +404,65 @@ AddLine(indx dirIx, indx pathIx)
     char dirname[MAXPATHLEN];
     indx i, n;
 
-    if (pathlist[dirIx].path[pathIx].type != RCT) {
+    if (pathlist[mIx].path[pathIx].type != RCT) {
         if (!bereallyQuiet) {
-            GetMasterDirName(dirname, dirIx);
+            GetMasterDirName(dirname, mIx);
             LogMsg(WARNING, OK,
                    "Please convert the point closepath in directory: "
                    "%s, character: %s to a line closepath.\n",
-                   dirname, currentChar);
+                   dirname, gGlyphName);
         }
         return;
     }
-    i = GetMTIx(dirIx, pathIx) + 1;
-    start = &pathlist[dirIx].path[i];
-    end = &pathlist[dirIx].path[pathIx];
+    i = GetMTIx(mIx, pathIx) + 1;
+    start = &pathlist[mIx].path[i];
+    end = &pathlist[mIx].path[pathIx];
     /* Check control points to find out if x or y value should be adjusted
      in order to get a smooth curve. */
     switch (start->type) {
         case RDT:
             if (!bereallyQuiet) {
-                GetMasterDirName(dirname, dirIx);
+                GetMasterDirName(dirname, mIx);
                 LogMsg(WARNING, OK,
                        "Please convert the point closepath to a line "
                        "closepath in directory: %s, character: %s.\n",
-                       dirname, currentChar);
+                       dirname, gGlyphName);
             }
             return;
             break;
         case RCT:
             if ((abs(start->x1 - end->x2) < fixTwo) &&
-                (abs(start->x1 - pathlist[dirIx].path[i - 1].x) < fixTwo))
+                (abs(start->x1 - pathlist[mIx].path[i - 1].x) < fixTwo))
                 yoffset = (start->y1 < end->y2 && end->y2 > 0) ||
                               (start->y1 > end->y2 && end->y2 < 0)
                             ? FixOne
                             : -FixOne;
             else if ((abs(start->y1 - end->y2) < fixTwo) &&
-                     (abs(start->y1 - pathlist[dirIx].path[i - 1].y) < fixTwo))
+                     (abs(start->y1 - pathlist[mIx].path[i - 1].y) < fixTwo))
                 xoffset = (start->x1 < end->x2 && end->x2 > 0) ||
                               (start->x1 > end->x2 && end->x2 < 0)
                             ? FixOne
                             : -FixOne;
             else {
                 if (!bereallyQuiet) {
-                    GetMasterDirName(dirname, dirIx);
+                    GetMasterDirName(dirname, mIx);
                     LogMsg(WARNING, OK,
                            "Could not modify point closepath in directory "
                            "'%s', character: %s near (%d, %d).\n",
-                           dirname, currentChar, FTrunc8(end->x),
+                           dirname, gGlyphName, FTrunc8(end->x),
                            FTrunc8(end->y));
                 }
                 return;
             }
             break;
         default:
-            GetMasterDirName(dirname, dirIx);
+            GetMasterDirName(dirname, mIx);
             LogMsg(LOGERROR, NONFATALERROR,
                    "Bad character description file: %s/%s.\n", dirname,
-                   currentChar);
+                   gGlyphName);
     }
 
-    thisone = &(pathlist[dirIx].path[pathIx]);
+    thisone = &(pathlist[mIx].path[pathIx]);
     thisone->x3 += xoffset;
     xoffsetr = (xoffset == 0) ? 0 : ((thisone->rx3 < 0) ? FixOne : -FixOne);
     thisone->rx3 += xoffsetr;
@@ -474,8 +473,8 @@ AddLine(indx dirIx, indx pathIx)
 
     /* Now, fix up the following MT's rx1, ry1 values
      This fixes a LOOOONG-standing bug.    renner Wed Jul 16 09:33:50 1997*/
-    if ((n = GetNextMTIx(dirIx, pathIx)) > 0) {
-        nxtone = &(pathlist[dirIx].path[n]);
+    if ((n = GetNextMTIx(mIx, pathIx)) > 0) {
+        nxtone = &(pathlist[mIx].path[n]);
         nxtone->rx += (-xoffsetr);
         nxtone->ry += (-yoffsetr);
     }
@@ -499,7 +498,7 @@ BestLine(PCharPathElt start, PCharPathElt end, Fixed* dx, Fixed* dy)
         fprintf(OUTPUTBUFF, "  cx=%f cy=%f ***\n", cx, cy);
 #endif /*DEBUG_PCP*/
         LogMsg(WARNING, OK, "Unexpected tangent in character path: %s.\n",
-               currentChar);
+               gGlyphName);
         return;
     }
 
@@ -555,39 +554,39 @@ BestLine(PCharPathElt start, PCharPathElt end, Fixed* dx, Fixed* dy)
 /* Curves: subtracts or adds one unit from the segment at pathIx. */
 /* Lines: flags the segment at pathIx to be removed later; CP follows it. */
 static void
-AddLineCube(indx dirIx, indx pathIx)
+AddLineCube(indx mIx, indx pathIx)
 {
     /* Path element types have already been coordinated by ChangeToCurve. */
     /* Hints are only present in the hintsdirIx. */
 
-    if (pathlist[dirIx].path[pathIx].type == RDT) {
-        pathlist[dirIx].path[pathIx].remove = true;
-        if (pathlist[dirIx].path[pathIx + 1].type != CP) {
+    if (pathlist[mIx].path[pathIx].type == RDT) {
+        pathlist[mIx].path[pathIx].remove = true;
+        if (pathlist[mIx].path[pathIx + 1].type != CP) {
             LogMsg(LOGERROR, NONFATALERROR, "Expected CP in path: %s.\n",
-                   currentChar);
+                   gGlyphName);
         }
 
         /* If there's another path in the character, we need to compensate */
         /* because CP does not update currentpoint. */
 
         if (pathIx + 2 < gPathEntries) {
-            if (pathlist[dirIx].path[pathIx + 2].type == RMT) {
-                pathlist[dirIx].path[pathIx + 2].rx +=
-                  pathlist[dirIx].path[pathIx].rx;
-                pathlist[dirIx].path[pathIx + 2].ry +=
-                  pathlist[dirIx].path[pathIx].ry;
+            if (pathlist[mIx].path[pathIx + 2].type == RMT) {
+                pathlist[mIx].path[pathIx + 2].rx +=
+                  pathlist[mIx].path[pathIx].rx;
+                pathlist[mIx].path[pathIx + 2].ry +=
+                  pathlist[mIx].path[pathIx].ry;
             } else {
                 LogMsg(LOGERROR, NONFATALERROR,
-                       "Expected second RMT in path: %s.\n", currentChar);
+                       "Expected second RMT in path: %s.\n", gGlyphName);
             }
         }
 
 #if DEBUG_PCP
-        if (dirIx == 0)
+        if (mIx == 0)
             fprintf(OUTPUTBUFF, "  RDT\n");
 #endif /*DEBUG_PCP*/
 
-    } else if (pathlist[dirIx].path[pathIx].type == RCT) {
+    } else if (pathlist[mIx].path[pathIx].type == RCT) {
         Fixed dx = 0;
         Fixed dy = 0;
         PCharPathElt start;
@@ -595,13 +594,13 @@ AddLineCube(indx dirIx, indx pathIx)
         indx mt; /* index of the moveto preceding this path */
 
 #if DEBUG_PCP
-        if (dirIx == 0)
+        if (mIx == 0)
             fprintf(OUTPUTBUFF, "  RCT\n");
 #endif /*DEBUG_PCP*/
 
-        mt = GetMTIx(dirIx, pathIx);
-        start = &pathlist[dirIx].path[mt + 1];
-        end = &pathlist[dirIx].path[pathIx];
+        mt = GetMTIx(mIx, pathIx);
+        start = &pathlist[mIx].path[mt + 1];
+        end = &pathlist[mIx].path[pathIx];
 
         /* find nearest grid point we can move to */
         BestLine(start, end, &dx, &dy);
@@ -611,17 +610,17 @@ AddLineCube(indx dirIx, indx pathIx)
 #endif /*DEBUG_PCP*/
 
         /* note that moving rx2, ry2 will also move rx3, ry3 */
-        pathlist[dirIx].path[pathIx].x2 += dx;
-        pathlist[dirIx].path[pathIx].x3 += dx;
-        pathlist[dirIx].path[pathIx].rx2 += dx;
+        pathlist[mIx].path[pathIx].x2 += dx;
+        pathlist[mIx].path[pathIx].x3 += dx;
+        pathlist[mIx].path[pathIx].rx2 += dx;
 
-        pathlist[dirIx].path[pathIx].y2 += dy;
-        pathlist[dirIx].path[pathIx].y3 += dy;
-        pathlist[dirIx].path[pathIx].ry2 += dy;
+        pathlist[mIx].path[pathIx].y2 += dy;
+        pathlist[mIx].path[pathIx].y3 += dy;
+        pathlist[mIx].path[pathIx].ry2 += dy;
     } else {
         /* Not a RCT or RDT - error - unexpected path element type. */
         LogMsg(LOGERROR, NONFATALERROR, "Bad character description file: %s.\n",
-               currentChar);
+               gGlyphName);
     }
 }
 
@@ -641,7 +640,7 @@ CheckForZeroLengthCP(void)
 {
     indx ix, pathIx;
 
-    for (ix = 0; ix < dirCount; ix++) {
+    for (ix = 0; ix < masterCount; ix++) {
         for (pathIx = 0; pathIx < gPathEntries; pathIx++) {
             if (pathlist[ix].path[pathIx].type == CP &&
                 ZeroLengthCP(ix, pathIx)) {
@@ -660,53 +659,53 @@ CheckForZeroLengthCP(void)
 static bool
 CompareCharPaths(const ACFontInfo* fontinfo, char** glyphs)
 {
-    indx dirix, ix, i;
+    indx mIx, ix, i;
     int32_t totalPathElt, minPathLen;
     bool ok = true;
     int16_t type1, type2;
 
     totalPathElt = minPathLen = MAXINT;
     if (pathlist == NULL) {
-        pathlist = (PPathList)AllocateMem(dirCount, sizeof(PathList),
+        pathlist = (PPathList)AllocateMem(masterCount, sizeof(PathList),
                                           "character path list");
     }
 
-    for (dirix = 0; dirix < dirCount; dirix++) {
+    for (mIx = 0; mIx < masterCount; mIx++) {
         ResetMaxPathEntries();
-        SetCurrPathList(&pathlist[dirix]);
+        SetCurrPathList(&pathlist[mIx]);
         gPathEntries = 0;
 
         /* read char data only */
-        if (!ReadGlyph(fontinfo, glyphs[dirix], true, false))
+        if (!ReadGlyph(fontinfo, glyphs[mIx], true, false))
             return false;
 
-        if (dirix == 0)
+        if (mIx == 0)
             totalPathElt = gPathEntries;
         else if (gPathEntries != totalPathElt) {
-            InconsistentPointCount(dirix, totalPathElt, gPathEntries);
+            InconsistentPointCount(mIx, totalPathElt, gPathEntries);
             ok = false;
         }
         minPathLen = NUMMIN(NUMMIN(gPathEntries, totalPathElt), minPathLen);
     }
 
-    for (dirix = 1; dirix < dirCount; dirix++) {
+    for (mIx = 1; mIx < masterCount; mIx++) {
         for (i = 0; i < minPathLen; i++) {
             if ((type1 = pathlist[0].path[i].type) !=
-                (type2 = pathlist[dirix].path[i].type)) {
+                (type2 = pathlist[mIx].path[i].type)) {
 
                 if ((type1 == RDT) &&
                     (type2 == RCT)) { /* Change this element in all previous
                                          directories to a curve. */
-                    ix = dirix - 1;
+                    ix = mIx - 1;
                     do {
                         ok = ok && ChangetoCurve(ix, i);
                         ix--;
                     } while (ix >= 0);
                 } else if ((type1 == RCT) && (type2 == RDT))
-                    ok = ok && ChangetoCurve(dirix, i);
+                    ok = ok && ChangetoCurve(mIx, i);
                 else {
-                    InconsistentPathType(dirix, pathlist[0].path[i].type,
-                                         pathlist[dirix].path[i].type, i);
+                    InconsistentPathType(mIx, pathlist[0].path[i].type,
+                                         pathlist[mIx].path[i].type, i);
                     ok = false;
                     /* skip to next subpath */
                     while (++i < minPathLen && (pathlist[0].path[i].type != CP))
@@ -721,17 +720,17 @@ CompareCharPaths(const ACFontInfo* fontinfo, char** glyphs)
 static void
 SetSbandWidth(bool fortransit, Transitions* trptr, int trgroupnum)
 {
-    indx dirix;
+    indx mIx;
 
-    for (dirix = 0; dirix < dirCount; dirix++) {
+    for (mIx = 0; mIx < masterCount; mIx++) {
         if (fortransit) {
-            pathlist[dirix].sb =
-              trptr->transitgrouparray[trgroupnum].assembled_sb[dirix];
-            pathlist[dirix].width =
-              trptr->transitgrouparray[trgroupnum].assembled_width[dirix];
+            pathlist[mIx].sb =
+              trptr->transitgrouparray[trgroupnum].assembled_sb[mIx];
+            pathlist[mIx].width =
+              trptr->transitgrouparray[trgroupnum].assembled_width[mIx];
         } else {
-            pathlist[dirix].sb = 0;
-            pathlist[dirix].width = 1000;
+            pathlist[mIx].sb = 0;
+            pathlist[mIx].width = 1000;
         }
     }
 }
@@ -744,7 +743,7 @@ WriteSbandWidth(void)
     indx ix, j, startix = 0;
     bool writeSubrOnce, sbsame = true, wsame = true;
 
-    for (ix = 1; ix < dirCount; ix++) {
+    for (ix = 1; ix < masterCount; ix++) {
         sbsame = sbsame && (pathlist[ix].sb == pathlist[ix - 1].sb);
         wsame = wsame && (pathlist[ix].width == pathlist[ix - 1].width);
     }
@@ -754,7 +753,7 @@ WriteSbandWidth(void)
     } else if (sbsame) {
         sprintf(outstr, "%d ", pathlist[0].sb);
         WriteToBuffer();
-        for (j = 0; j < dirCount; j++) {
+        for (j = 0; j < masterCount; j++) {
             sprintf(outstr, "%d ",
                     (j == 0) ? pathlist[j].width
                              : pathlist[j].width - pathlist[0].width);
@@ -763,7 +762,7 @@ WriteSbandWidth(void)
         GetLengthandSubrIx(1, &length, &subrix);
         WriteSubr(subrix);
     } else if (wsame) {
-        for (j = 0; j < dirCount; j++) {
+        for (j = 0; j < masterCount; j++) {
             sprintf(outstr, "%d ",
                     (j == 0) ? pathlist[j].sb
                              : pathlist[j].sb - pathlist[0].sb);
@@ -781,7 +780,7 @@ WriteSbandWidth(void)
             length = startix = 1;
         }
         for (ix = 0; ix < opcount; ix += length) {
-            for (j = startix; j < dirCount; j++) {
+            for (j = startix; j < masterCount; j++) {
                 sprintf(outstr, "%d ",
                         (ix == 0)
                           ? (j == 0) ? pathlist[j].sb
@@ -800,7 +799,7 @@ WriteSbandWidth(void)
 #endif
 
 static bool
-CurveBBox(indx dirIx, int16_t hinttype, int32_t pathIx, Fixed* value)
+CurveBBox(indx mIx, int16_t hinttype, int32_t pathIx, Fixed* value)
 {
     Cd startPt, endPt;
     Fixed llx, lly, urx, ury, minval, maxval;
@@ -808,8 +807,8 @@ CurveBBox(indx dirIx, int16_t hinttype, int32_t pathIx, Fixed* value)
     CharPathElt pathElt;
 
     *value = IntToFix(10000);
-    pathElt = pathlist[dirIx].path[pathIx];
-    GetEndPoints1(dirIx, pathIx, &startPt, &endPt);
+    pathElt = pathlist[mIx].path[pathIx];
+    GetEndPoints1(mIx, pathIx, &startPt, &endPt);
     switch (hinttype) {
         case RB:
         case RV + ESCVAL:
@@ -831,7 +830,7 @@ CurveBBox(indx dirIx, int16_t hinttype, int32_t pathIx, Fixed* value)
             break;
         default:
             LogMsg(LOGERROR, NONFATALERROR,
-                   "Illegal hint type in character: %s.\n", currentChar);
+                   "Illegal hint type in character: %s.\n", gGlyphName);
     }
     if (p1 - maxval >= FixOne || p2 - maxval >= FixOne ||
         p1 - minval <= FixOne || p2 - minval <= FixOne) {
@@ -974,7 +973,7 @@ retry:
             break;
         default:
             LogMsg(LOGERROR, NONFATALERROR,
-                   "Illegal hint type in character: %s.\n", currentChar);
+                   "Illegal hint type in character: %s.\n", gGlyphName);
     }
 
     /* Check for exactly equal first, in case endval = startval + 1. jvz 1nov95
@@ -1131,7 +1130,7 @@ InsertHint(PHintElt currHintElt, indx pathEltIx, int16_t type1, int16_t type2)
     if (type1 == GHOST || type2 == GHOST)
         /* ghostVal should be -20 or -21 */
         ghostVal = currHintElt->rightortop - currHintElt->leftorbot;
-    for (ix = 0; ix < dirCount; ix++) {
+    for (ix = 0; ix < masterCount; ix++) {
         if (ix == hintsdirIx)
             continue;
         newEntry = (PHintElt)AllocateMem(1, sizeof(HintElt), "hint element");
@@ -1178,7 +1177,7 @@ InsertHint(PHintElt currHintElt, indx pathEltIx, int16_t type1, int16_t type2)
                         LogMsg(LOGERROR, NONFATALERROR,
                                "Malformed path list: %s, dir: %d, "
                                "element: %d != RCT.\n",
-                               currentChar, ix, pathIx);
+                               gGlyphName, ix, pathIx);
                     }
                     if (!GetInflectionPoint(startPt.x, startPt.y, pathElt.x1,
                                             pathElt.y1, pathElt.x2, pathElt.y2,
@@ -1204,7 +1203,7 @@ InsertHint(PHintElt currHintElt, indx pathEltIx, int16_t type1, int16_t type2)
                 default:
                     LogMsg(LOGERROR, NONFATALERROR,
                            "Illegal point type in character: %s.\n",
-                           currentChar);
+                           gGlyphName);
             }
             /* Assign correct value for bottom band if first path element
              is a ghost band. */
@@ -1279,7 +1278,7 @@ CheckFlexOK(indx ix)
     PCharPathElt end;
     char pathdir[MAXPATHLEN];
 
-    for (i = 0; i < dirCount; i++) {
+    for (i = 0; i < masterCount; i++) {
         if (i == hintsdirIx)
             continue;
         if (flexOK && (!pathlist[i].path[ix].isFlex)) {
@@ -1291,7 +1290,7 @@ CheckFlexOK(indx ix)
                        "in '%s' at element %d near (%d, %d) because "
                        "the character does not have flex in each "
                        "design.\n",
-                       currentChar, pathdir, (int)ix, FTrunc8(end->x),
+                       gGlyphName, pathdir, (int)ix, FTrunc8(end->x),
                        FTrunc8(end->y));
                 return false;
             } else {
@@ -1309,12 +1308,12 @@ OptimizeCT(indx ix)
     bool vhct = true, hvct = true;
     indx i;
 
-    for (i = 0; i < dirCount; i++)
+    for (i = 0; i < masterCount; i++)
         if (pathlist[i].path[ix].rx1 != 0 || pathlist[i].path[ix].ry3 != 0) {
             vhct = false;
             break;
         }
-    for (i = 0; i < dirCount; i++)
+    for (i = 0; i < masterCount; i++)
         if (pathlist[i].path[ix].ry1 != 0 || pathlist[i].path[ix].rx3 != 0) {
             hvct = false;
             break;
@@ -1324,7 +1323,7 @@ OptimizeCT(indx ix)
     else if (hvct)
         newtype = HVCT;
     if (vhct || hvct)
-        for (i = 0; i < dirCount; i++)
+        for (i = 0; i < masterCount; i++)
             pathlist[i].path[ix].type = newtype;
 }
 
@@ -1363,7 +1362,7 @@ Hvct(Cd coord1, Cd coord2, Cd coord3, indx startix, int16_t length)
                 LogMsg(LOGERROR, NONFATALERROR,
                        "Invalid index value: %d defined for curveto "
                        "command1 in character: %s.\n",
-                       (int)ix, currentChar);
+                       (int)ix, gGlyphName);
                 break;
         }
 }
@@ -1392,7 +1391,7 @@ Vhct(Cd coord1, Cd coord2, Cd coord3, indx startix, int16_t length)
                 LogMsg(LOGERROR, NONFATALERROR,
                        "Invalid index value: %d defined for curveto "
                        "command2 in character:%s.\n",
-                       (int)ix, currentChar);
+                       (int)ix, gGlyphName);
                 break;
         }
 }
@@ -1428,7 +1427,7 @@ Ct(Cd coord1, Cd coord2, Cd coord3, indx startix, int16_t length)
                 LogMsg(LOGERROR, NONFATALERROR,
                        "Invalid index value: %d defined for curveto "
                        "command3 in character: %s.\n",
-                       (int)ix, currentChar);
+                       (int)ix, gGlyphName);
                 break;
         }
 }
@@ -1445,7 +1444,7 @@ ReadHorVStem3Values(indx pathIx, int16_t eltno, int16_t hinttype,
     Fixed min, dmin, mid, dmid, max, dmax;
     char dirname[MAXPATHLEN];
 
-    for (ix = 0; ix < dirCount; ix++) {
+    for (ix = 0; ix < masterCount; ix++) {
         count = 1;
         if (ix == hintsdirIx)
             continue;
@@ -1463,7 +1462,7 @@ ReadHorVStem3Values(indx pathIx, int16_t eltno, int16_t hinttype,
             LogMsg(LOGERROR, NONFATALERROR,
                    "Invalid format for hint operator: hstem3 or "
                    "vstem3 in character: %s/%s.\n",
-                   dirname, currentChar);
+                   dirname, gGlyphName);
         }
         if ((*hintElt)->type != hinttype ||
             (*hintElt)->next->type != hinttype ||
@@ -1471,7 +1470,7 @@ ReadHorVStem3Values(indx pathIx, int16_t eltno, int16_t hinttype,
             LogMsg(LOGERROR, NONFATALERROR,
                    "Invalid format for hint operator: hstem3 or "
                    "vstem3 in character: %s in '%s'.\n",
-                   currentChar, dirname);
+                   gGlyphName, dirname);
         }
         min = (*hintElt)->leftorbot;
         dmin = (*hintElt)->rightortop - min;
@@ -1496,7 +1495,7 @@ ReadHorVStem3Values(indx pathIx, int16_t eltno, int16_t hinttype,
                    "%s in '%s'. (min=%d..%d[delta=%d], "
                    "mid=%d..%d[delta=%d], max=%d..%d[delta=%d])\n",
                    (hinttype == (RM + ESCVAL)) ? "vstem3" : "hstem3",
-                   currentChar, dirname, FTrunc8((*hintElt)->leftorbot),
+                   gGlyphName, dirname, FTrunc8((*hintElt)->leftorbot),
                    FTrunc8((*hintElt)->rightortop),
                    FTrunc8((*hintElt)->rightortop - (*hintElt)->leftorbot),
                    FTrunc8((*hintElt)->next->leftorbot),
@@ -1509,7 +1508,7 @@ ReadHorVStem3Values(indx pathIx, int16_t eltno, int16_t hinttype,
                            (*hintElt)->next->next->leftorbot));
             *errormsg = false;
         }
-        for (ix = 0; ix < dirCount; ix++) {
+        for (ix = 0; ix < masterCount; ix++) {
             count = 1;
             hintElt = (pathIx == MAINHINTS ? &pathlist[ix].mainhints
                                            : &pathlist[ix].path[pathIx].hints);
@@ -1572,7 +1571,7 @@ CheckFlexValues(int16_t* operator, indx eltix, indx flexix, bool* xequal,
         return;
 
     *xequal = *yequal = true;
-    for (ix = 1; ix < dirCount; ix++)
+    for (ix = 1; ix < masterCount; ix++)
         switch (flexix) {
             case 2:
                 if ((coord.x = pathlist[ix].path[eltix].rx2) !=
@@ -1637,40 +1636,40 @@ CheckFlexValues(int16_t* operator, indx eltix, indx flexix, bool* xequal,
 }
 
 static void
-GetFlexCoord(indx rmtCt, indx dirix, indx eltix, Cd* coord)
+GetFlexCoord(indx rmtCt, indx mIx, indx eltix, Cd* coord)
 {
     switch (rmtCt) {
         case 0:
-            (*coord).x = refPtArray[dirix].x - pathlist[dirix].path[eltix].x;
-            (*coord).y = refPtArray[dirix].y - pathlist[dirix].path[eltix].y;
+            (*coord).x = refPtArray[mIx].x - pathlist[mIx].path[eltix].x;
+            (*coord).y = refPtArray[mIx].y - pathlist[mIx].path[eltix].y;
             break;
         case 1:
-            (*coord).x = pathlist[dirix].path[eltix].x1 - refPtArray[dirix].x;
-            (*coord).y = pathlist[dirix].path[eltix].y1 - refPtArray[dirix].y;
+            (*coord).x = pathlist[mIx].path[eltix].x1 - refPtArray[mIx].x;
+            (*coord).y = pathlist[mIx].path[eltix].y1 - refPtArray[mIx].y;
             break;
         case 2:
-            (*coord).x = pathlist[dirix].path[eltix].rx2;
-            (*coord).y = pathlist[dirix].path[eltix].ry2;
+            (*coord).x = pathlist[mIx].path[eltix].rx2;
+            (*coord).y = pathlist[mIx].path[eltix].ry2;
             break;
         case 3:
-            (*coord).x = pathlist[dirix].path[eltix].rx3;
-            (*coord).y = pathlist[dirix].path[eltix].ry3;
+            (*coord).x = pathlist[mIx].path[eltix].rx3;
+            (*coord).y = pathlist[mIx].path[eltix].ry3;
             break;
         case 4:
-            (*coord).x = pathlist[dirix].path[eltix + 1].rx1;
-            (*coord).y = pathlist[dirix].path[eltix + 1].ry1;
+            (*coord).x = pathlist[mIx].path[eltix + 1].rx1;
+            (*coord).y = pathlist[mIx].path[eltix + 1].ry1;
             break;
         case 5:
-            (*coord).x = pathlist[dirix].path[eltix + 1].rx2;
-            (*coord).y = pathlist[dirix].path[eltix + 1].ry2;
+            (*coord).x = pathlist[mIx].path[eltix + 1].rx2;
+            (*coord).y = pathlist[mIx].path[eltix + 1].ry2;
             break;
         case 6:
-            (*coord).x = pathlist[dirix].path[eltix + 1].rx3;
-            (*coord).y = pathlist[dirix].path[eltix + 1].ry3;
+            (*coord).x = pathlist[mIx].path[eltix + 1].rx3;
+            (*coord).y = pathlist[mIx].path[eltix + 1].ry3;
             break;
         case 7:
-            (*coord).x = pathlist[dirix].path[eltix + 1].x3;
-            (*coord).y = pathlist[dirix].path[eltix + 1].y3;
+            (*coord).x = pathlist[mIx].path[eltix + 1].x3;
+            (*coord).y = pathlist[mIx].path[eltix + 1].y3;
             break;
     }
 }
@@ -1695,8 +1694,8 @@ WriteFlex(indx eltix)
     int16_t opcount, subrIx, length;
 
     refPtArray =
-      (Cd*)AllocateMem(dirCount, sizeof(Cd), "reference point array");
-    for (ix = 0; ix < dirCount; ix++) {
+      (Cd*)AllocateMem(masterCount, sizeof(Cd), "reference point array");
+    for (ix = 0; ix < masterCount; ix++) {
         refPtArray[ix].x =
           (vert ? pathlist[ix].path[eltix].x : pathlist[ix].path[eltix].x3);
         refPtArray[ix].y =
@@ -1726,7 +1725,7 @@ WriteFlex(indx eltix)
         } else if (xsame) {
             WriteX(coord.x);
             if (optype != HMT) {
-                for (ix = 0; ix < dirCount; ix++) {
+                for (ix = 0; ix < masterCount; ix++) {
                     GetFlexCoord(j, ix, eltix, &coord);
                     WriteY((ix == 0 ? coord.y : coord.y - coord0.y));
                 }
@@ -1734,7 +1733,7 @@ WriteFlex(indx eltix)
             }
         } else if (ysame) {
             if (optype != VMT) {
-                for (ix = 0; ix < dirCount; ix++) {
+                for (ix = 0; ix < masterCount; ix++) {
                     GetFlexCoord(j, ix, eltix, &coord);
                     WriteX((ix == 0 ? coord.x : coord.x - coord0.x));
                 }
@@ -1753,7 +1752,7 @@ WriteFlex(indx eltix)
                 length = startix = 1;
             }
             for (opix = 0; opix < opcount; opix += length) {
-                for (ix = startix; ix < dirCount; ix++) {
+                for (ix = startix; ix < masterCount; ix++) {
                     GetFlexCoord(j, ix, eltix, &coord);
                     if (ix != 0) {
                         coord.x -= coord0.x;
@@ -1804,10 +1803,10 @@ WriteHints(indx pathEltIx)
     /* hintArray contains the pointers to the beginning of the linked list of
      hints for
      each design at pathEltIx. */
-    hintArray =
-      (PHintElt*)AllocateMem(dirCount, sizeof(HintElt*), "hint element array");
+    hintArray = (PHintElt*)AllocateMem(masterCount, sizeof(HintElt*),
+                                       "hint element array");
     /* Initialize hint array. */
-    for (ix = 0; ix < dirCount; ix++)
+    for (ix = 0; ix < masterCount; ix++)
         hintArray[ix] =
           (pathEltIx == MAINHINTS ? pathlist[ix].mainhints
                                   : pathlist[ix].path[pathEltIx].hints);
@@ -1817,7 +1816,7 @@ WriteHints(indx pathEltIx)
     while (hintArray[0] != NULL) {
         startix = 0;
         hinttype = hintArray[hintsdirIx]->type;
-        for (ix = 0; ix < dirCount; ix++) {
+        for (ix = 0; ix < masterCount; ix++) {
             hintArray[ix]->rightortop -=
               hintArray[ix]->leftorbot; /* relativize */
             if ((hinttype == RY || hinttype == (RM + ESCVAL)) && !cubeLibrary)
@@ -1828,7 +1827,7 @@ WriteHints(indx pathEltIx)
                 hintArray[ix]->leftorbot -= IntToFix(pathlist[ix].sb);
         }
         lbsame = rtsame = true;
-        for (ix = 1; ix < dirCount; ix++) {
+        for (ix = 1; ix < masterCount; ix++) {
             if (hintArray[ix]->leftorbot != hintArray[ix - 1]->leftorbot)
                 lbsame = false;
             if (hintArray[ix]->rightortop != hintArray[ix - 1]->rightortop)
@@ -1839,14 +1838,14 @@ WriteHints(indx pathEltIx)
             WriteOneHintVal(hintArray[0]->rightortop);
         } else if (lbsame) {
             WriteOneHintVal(hintArray[0]->leftorbot);
-            for (ix = 0; ix < dirCount; ix++)
+            for (ix = 0; ix < masterCount; ix++)
                 WriteOneHintVal((ix == 0 ? hintArray[ix]->rightortop
                                          : hintArray[ix]->rightortop -
                                              hintArray[0]->rightortop));
             GetLengthandSubrIx(1, &length, &subrIx);
             WriteSubr(subrIx);
         } else if (rtsame) {
-            for (ix = 0; ix < dirCount; ix++)
+            for (ix = 0; ix < masterCount; ix++)
                 WriteOneHintVal((ix == 0 ? hintArray[ix]->leftorbot
                                          : hintArray[ix]->leftorbot -
                                              hintArray[0]->leftorbot));
@@ -1862,7 +1861,7 @@ WriteHints(indx pathEltIx)
                 length = startix = 1;
             }
             for (opix = 0; opix < opcount; opix += length) {
-                for (ix = startix; ix < dirCount; ix++) {
+                for (ix = startix; ix < masterCount; ix++) {
                     if (opix == 0)
                         WriteOneHintVal((ix == 0 ? hintArray[ix]->leftorbot
                                                  : hintArray[ix]->leftorbot -
@@ -1898,9 +1897,9 @@ WriteHints(indx pathEltIx)
             default:
                 LogMsg(LOGERROR, NONFATALERROR,
                        "Illegal hint type: %d in character: %s.\n", hinttype,
-                       currentChar);
+                       gGlyphName);
         }
-        for (ix = 0; ix < dirCount; ix++)
+        for (ix = 0; ix < masterCount; ix++)
             hintArray[ix] =
               (hintArray[ix]->next == NULL) ? NULL : hintArray[ix]->next;
     } /* end of while */
@@ -1910,34 +1909,34 @@ WriteHints(indx pathEltIx)
 }
 
 static void
-WritePathElt(indx dirIx, indx eltIx, int16_t pathType, indx startix,
+WritePathElt(indx mIx, indx eltIx, int16_t pathType, indx startix,
              int16_t length)
 {
     Cd c1, c2, c3;
     PCharPathElt path, path0;
 
-    path = &pathlist[dirIx].path[eltIx];
+    path = &pathlist[mIx].path[eltIx];
     path0 = &pathlist[0].path[eltIx];
 
     switch (pathType) {
         case HDT:
         case HMT:
-            WriteX((dirIx == 0 ? path->rx : path->rx - path0->rx));
+            WriteX((mIx == 0 ? path->rx : path->rx - path0->rx));
             break;
         case VDT:
         case VMT:
-            WriteY((dirIx == 0 ? path->ry : path->ry - path0->ry));
+            WriteY((mIx == 0 ? path->ry : path->ry - path0->ry));
             break;
         case RDT:
         case RMT:
-            c1.x = (dirIx == 0 ? path->rx : path->rx - path0->rx);
-            c1.y = (dirIx == 0 ? path->ry : path->ry - path0->ry);
+            c1.x = (mIx == 0 ? path->rx : path->rx - path0->rx);
+            c1.y = (mIx == 0 ? path->ry : path->ry - path0->ry);
             MtorDt(c1, startix, length);
             break;
         case HVCT:
         case VHCT:
         case RCT:
-            if (dirIx == 0) {
+            if (mIx == 0) {
                 c1.x = path->rx1;
                 c1.y = path->ry1;
                 c2.x = path->rx2;
@@ -1964,7 +1963,7 @@ WritePathElt(indx dirIx, indx eltIx, int16_t pathType, indx startix,
         default: {
             LogMsg(LOGERROR, NONFATALERROR,
                    "Illegal path operator %d found in character: %s.\n",
-                   (int)pathType, currentChar);
+                   (int)pathType, gGlyphName);
         }
     }
 }
@@ -1975,7 +1974,7 @@ OptimizeMtorDt(indx eltix, int16_t* op, bool* xequal, bool* yequal)
     indx ix;
 
     *xequal = *yequal = true;
-    for (ix = 1; ix < dirCount; ix++) {
+    for (ix = 1; ix < masterCount; ix++) {
         *xequal = *xequal && (pathlist[ix].path[eltix].rx ==
                               pathlist[ix - 1].path[eltix].rx);
         *yequal = *yequal && (pathlist[ix].path[eltix].ry ==
@@ -2036,7 +2035,7 @@ CoordsEqual(indx dir1, indx dir2, indx opIx, indx eltIx, int16_t op)
                    "Invalid index value: %d defined for curveto "
                    "command4 in character: %s. Op=%d, dir=%s near "
                    "(%d %d).\n",
-                   (int)opIx, currentChar, (int)op, dirname, FTrunc8(path1->x),
+                   (int)opIx, gGlyphName, (int)op, dirname, FTrunc8(path1->x),
                    FTrunc8(path1->y));
             break;
     }
@@ -2050,13 +2049,13 @@ CoordsEqual(indx dir1, indx dir2, indx opIx, indx eltIx, int16_t op)
 static bool
 SamePathValues(indx eltIx, int16_t op, indx startIx, int16_t length)
 {
-    indx ix, dirIx;
+    indx ix, mIx;
     /*  PCharPathElt path0 = &pathlist[0].path[eltIx]; */
     bool same = true;
 
     for (ix = 0; ix < length; ix++) {
-        for (dirIx = 1; dirIx < dirCount; dirIx++)
-            if (!(same = same && CoordsEqual(dirIx, 0, startIx, eltIx, op)))
+        for (mIx = 1; mIx < masterCount; mIx++)
+            if (!(same = same && CoordsEqual(mIx, 0, startIx, eltIx, op)))
                 return false;
         startIx++;
     }
@@ -2071,7 +2070,7 @@ static void
 CombinePaths(void)
 {
 #if !IS_LIB
-    indx ix, eltix, opix, startIx, dirIx;
+    indx ix, eltix, opix, startIx, mIx;
     int16_t length, subrIx, opcount, op;
     char operator[MAXOPLEN];
     bool xequal, yequal;
@@ -2096,7 +2095,7 @@ CombinePaths(void)
                 if (firstMT &&
                     !cubeLibrary) /* translate by sidebearing value */
                                   /* don't want this for cube */
-                    for (ix = 0; ix < dirCount; ix++)
+                    for (ix = 0; ix < masterCount; ix++)
                         pathlist[ix].path[eltix].rx -=
                           IntToFix(pathlist[ix].sb);
                 firstMT = false;
@@ -2120,7 +2119,7 @@ CombinePaths(void)
                 break;
             default:
                 LogMsg(LOGERROR, NONFATALERROR,
-                       "Unknown operator in character: %s.\n", currentChar);
+                       "Unknown operator in character: %s.\n", gGlyphName);
         }
         op = pathlist[0].path[eltix].type;
         if (op != RCT && op != HVCT && op != VHCT && op != CP)
@@ -2134,7 +2133,7 @@ CombinePaths(void)
         } else if (xequal) {
             WriteX(pathlist[0].path[eltix].rx);
             if (op != HMT && op != HDT) {
-                for (ix = 0; ix < dirCount; ix++)
+                for (ix = 0; ix < masterCount; ix++)
                     WriteY(((ix == 0) ? pathlist[ix].path[eltix].ry
                                       : pathlist[ix].path[eltix].ry -
                                           pathlist[0].path[eltix].ry));
@@ -2143,7 +2142,7 @@ CombinePaths(void)
             }
         } else if (yequal) {
             if (op != VMT && op != VDT) {
-                for (ix = 0; ix < dirCount; ix++)
+                for (ix = 0; ix < masterCount; ix++)
                     WriteX(((ix == 0) ? pathlist[ix].path[eltix].rx
                                       : pathlist[ix].path[eltix].rx -
                                           pathlist[0].path[eltix].rx));
@@ -2159,8 +2158,8 @@ CombinePaths(void)
                     if (SamePathValues(eltix, op, startIx, length))
                         continue;
                 for (ix = 0; ix < length; ix++) {
-                    for (dirIx = 1; dirIx < dirCount; dirIx++)
-                        WritePathElt(dirIx, eltix, op, startIx, 1);
+                    for (mIx = 1; mIx < masterCount; mIx++)
+                        WritePathElt(mIx, eltix, op, startIx, 1);
                     startIx++;
                 }
                 if (subrIx >= 0 && op != CP)
@@ -2205,7 +2204,7 @@ GetOperandCount(int16_t op)
                 break;
             default:
                 LogMsg(LOGERROR, NONFATALERROR,
-                       "Unknown operator in character: %s.\n", currentChar);
+                       "Unknown operator in character: %s.\n", gGlyphName);
                 break;
         }
     else /* handle escape operators */
@@ -2225,9 +2224,9 @@ static void
 GetLengthandSubrIx(int16_t opcount, int16_t* length, int16_t* subrIx)
 {
 
-    if (((opcount * dirCount) > FONTSTKLIMIT) && opcount != 1)
-        if ((opcount / 2 * dirCount) > FONTSTKLIMIT)
-            if ((2 * dirCount) > FONTSTKLIMIT)
+    if (((opcount * masterCount) > FONTSTKLIMIT) && opcount != 1)
+        if ((opcount / 2 * masterCount) > FONTSTKLIMIT)
+            if ((2 * masterCount) > FONTSTKLIMIT)
                 *length = 1;
             else
                 *length = 2;
@@ -2235,9 +2234,9 @@ GetLengthandSubrIx(int16_t opcount, int16_t* length, int16_t* subrIx)
             *length = opcount / 2;
     else
         *length = opcount;
-    if (((*length) * dirCount) > FONTSTKLIMIT) {
+    if (((*length) * masterCount) > FONTSTKLIMIT) {
         LogMsg(LOGERROR, NONFATALERROR,
-               "Font stack limit exceeded for character: %s.\n", currentChar);
+               "Font stack limit exceeded for character: %s.\n", gGlyphName);
     }
     if (!cubeLibrary) {
         switch (*length) {
@@ -2259,11 +2258,11 @@ GetLengthandSubrIx(int16_t opcount, int16_t* length, int16_t* subrIx)
             default:
                 LogMsg(LOGERROR, NONFATALERROR,
                        "Illegal operand length for character: %s.\n",
-                       currentChar);
+                       gGlyphName);
                 break;
         }
     } else { /* CUBE */
-        switch (dirCount) {
+        switch (masterCount) {
             case 2:
                 switch (*length) {
                     case 1:
@@ -2284,7 +2283,7 @@ GetLengthandSubrIx(int16_t opcount, int16_t* length, int16_t* subrIx)
                     default:
                         LogMsg(LOGERROR, NONFATALERROR,
                                "Illegal operand length for character: %s.\n",
-                               currentChar);
+                               gGlyphName);
                         break;
                 }
                 break;
@@ -2306,7 +2305,7 @@ GetLengthandSubrIx(int16_t opcount, int16_t* length, int16_t* subrIx)
                     default:
                         LogMsg(LOGERROR, NONFATALERROR,
                                "Illegal operand length for character: %s.\n",
-                               currentChar);
+                               gGlyphName);
                         break;
                 }
                 break;
@@ -2322,7 +2321,7 @@ GetLengthandSubrIx(int16_t opcount, int16_t* length, int16_t* subrIx)
                     default:
                         LogMsg(LOGERROR, NONFATALERROR,
                                "Illegal operand length for character: %s.\n",
-                               currentChar);
+                               gGlyphName);
                         break;
                 }
                 break;
@@ -2335,13 +2334,13 @@ GetLengthandSubrIx(int16_t opcount, int16_t* length, int16_t* subrIx)
                     default:
                         LogMsg(LOGERROR, NONFATALERROR,
                                "Illegal operand length for character: %s.\n",
-                               currentChar);
+                               gGlyphName);
                         break;
                 }
                 break;
 
             default:
-                LogMsg(LOGERROR, NONFATALERROR, "Illegal dirCount.\n");
+                LogMsg(LOGERROR, NONFATALERROR, "Illegal masterCount.\n");
                 break;
         }
     }
@@ -2391,7 +2390,7 @@ MergeCharPaths(const ACFontInfo* fontinfo, char** outbuffer, char** srcglyphs,
 {
     bool ok;
 
-    dirCount = nmasters;
+    masterCount = nmasters;
     byteCount = 1;
     buffSize = GetMaxBytes();
     outbuff = outbuffer;
@@ -2412,6 +2411,6 @@ MergeCharPaths(const ACFontInfo* fontinfo, char** outbuffer, char** srcglyphs,
         }
         CombinePaths();
     }
-    FreePathElements(0, dirCount);
+    FreePathElements(0, masterCount);
     return ok;
 }
