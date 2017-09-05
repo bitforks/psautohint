@@ -68,7 +68,8 @@ ResetMaxPathEntries(void)
     maxPathEntries = MAXPATHELT;
 }
 
-void SetCurrPathList(plist) PPathList plist;
+void
+SetCurrPathList(PPathList plist)
 {
     currPathList = plist;
 }
