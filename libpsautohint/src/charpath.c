@@ -16,7 +16,6 @@
 #include "bbox.h"
 #include "opcodes.h"
 #include "optable.h"
-#include "transitionalchars.h"
 
 #define IS_LIB 0
 
@@ -716,20 +715,13 @@ CompareCharPaths(const ACFontInfo* fontinfo, char** glyphs)
 }
 
 static void
-SetSbandWidth(bool fortransit, Transitions* trptr, int trgroupnum)
+SetSbandWidth(void)
 {
     indx mIx;
 
     for (mIx = 0; mIx < masterCount; mIx++) {
-        if (fortransit) {
-            pathlist[mIx].sb =
-              trptr->transitgrouparray[trgroupnum].assembled_sb[mIx];
-            pathlist[mIx].width =
-              trptr->transitgrouparray[trgroupnum].assembled_width[mIx];
-        } else {
-            pathlist[mIx].sb = 0;
-            pathlist[mIx].width = 1000;
-        }
+        pathlist[mIx].sb = 0;
+        pathlist[mIx].width = 1000;
     }
 }
 
@@ -2384,7 +2376,7 @@ GetHintsDir(void)
 
 static bool
 MergeCharPaths(const ACFontInfo* fontinfo, char** outbuffer, char** srcglyphs,
-               int nmasters, bool fortransit, Transitions* tr, int trgroupnum)
+               int nmasters)
 {
     bool ok;
 
@@ -2398,7 +2390,7 @@ MergeCharPaths(const ACFontInfo* fontinfo, char** outbuffer, char** srcglyphs,
     ok = CompareCharPaths(fontinfo, srcglyphs);
     if (ok) {
         CheckForZeroLengthCP();
-        SetSbandWidth(fortransit, tr, trgroupnum);
+        SetSbandWidth();
         if (gAddHints && hintsdirIx >= 0 && gPathEntries > 0) {
             if (ReadandAssignHints()) {
                 LogMsg(LOGERROR, FATALERROR,
