@@ -65,9 +65,7 @@ static void GetLengthandSubrIx(int16_t, int16_t*, int16_t*);
 static void
 GetMasterDirName(char* dirname, indx ix)
 {
-    (void)ix;
-    if (dirname)
-        dirname[0] = '\0';
+    sprintf(dirname, "%d", ix);
 }
 
 /* macros */
