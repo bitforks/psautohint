@@ -9,10 +9,6 @@
 
 #include "charpath.h"
 #include "ac.h"
-//#include "bftoac.h"
-#include "buildfont.h"
-//#include "chartable.h"
-//#include "hintfile.h"
 #include "bbox.h"
 #include "opcodes.h"
 #include "optable.h"
@@ -53,6 +49,7 @@ static char *startbuff, **outbuff;
 static int16_t masterCount, byteCount, buffSize;
 static PPathList pathlist = NULL;
 static indx hintsdirIx;
+static int32_t maxBytes = 0;
 
 /* Prototypes */
 static void GetRelativePosition(Fixed, Fixed, Fixed, Fixed, Fixed, Fixed*);
@@ -65,6 +62,18 @@ static void
 GetMasterDirName(char* dirname, indx ix)
 {
     sprintf(dirname, "%d", ix);
+}
+
+static int32_t
+GetMaxBytes(void)
+{
+    return maxBytes;
+}
+
+static void
+SetMaxBytes(int32_t value)
+{
+    maxBytes = value;
 }
 
 /* macros */
