@@ -35,10 +35,8 @@
 #define FLATTEN 4
 #define GHOST 5
 
-bool flexexists;
-extern bool multiplemaster;
-bool cubeLibrary;
-bool bereallyQuiet = 1;
+static bool cubeLibrary = false;
+static bool bereallyQuiet = true;
 
 #if !IS_LIB
 static bool firstMT;
@@ -1782,7 +1780,6 @@ WriteFlex(indx eltix)
         }
     } /* end of j for loop */
     WriteStr("0 subr\n");
-    flexexists = true;
     UnallocateMem(refPtArray);
 #else
     (void)eltix;
