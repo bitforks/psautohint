@@ -361,7 +361,7 @@ InconsistentPathType(indx ix, int16_t type1, int16_t type2, indx eltno)
 static bool
 ChangetoCurve(indx mIx, indx pathIx)
 {
-    Cd start, end, ctl1, ctl2;
+    Cd start = { 0, 0 }, end = { 0, 0 }, ctl1, ctl2;
     PCharPathElt pathElt = &pathlist[mIx].path[pathIx];
 
     if (pathElt->type == RCT)
@@ -393,7 +393,7 @@ ChangetoCurve(indx mIx, indx pathIx)
 static bool
 ZeroLengthCP(indx mIx, indx pathIx)
 {
-    Cd startPt, endPt;
+    Cd startPt = { 0, 0 }, endPt = { 0, 0 };
 
     GetEndPoints1(mIx, pathIx, &startPt, &endPt);
     return (startPt.x == endPt.x && startPt.y == endPt.y);
@@ -801,8 +801,8 @@ static bool
 CurveBBox(indx mIx, int16_t hinttype, int32_t pathIx, Fixed* value)
 {
     Cd startPt, endPt;
-    Fixed llx, lly, urx, ury, minval, maxval;
-    Fixed p1, p2, *minbx, *maxbx;
+    Fixed llx, lly, urx, ury, minval = 0, maxval = 0;
+    Fixed p1 = 0, p2 = 0, *minbx = 0, *maxbx = 0;
     CharPathElt pathElt;
 
     *value = IntToFix(10000);
@@ -933,7 +933,7 @@ static int16_t
 GetPointType(int16_t hinttype, Fixed value, int32_t* pathEltIx)
 {
     Cd startPt, endPt;
-    Fixed startval, endval, loc;
+    Fixed startval = 0, endval = 0, loc;
     int16_t pathtype;
     bool tryAgain = true;
     int32_t pathIx = *pathEltIx - 1;
@@ -1098,7 +1098,7 @@ InsertHint(PHintElt currHintElt, indx pathEltIx, int16_t type1, int16_t type2)
     CharPathElt pathElt;
     int32_t pathIx;
     int16_t pathtype, hinttype = currHintElt->type;
-    Fixed *value, ghostVal, tempVal;
+    Fixed *value, ghostVal = 0, tempVal;
 
 #if __CENTERLINE__
     if (TRACE) {
@@ -1563,7 +1563,7 @@ CheckFlexValues(int16_t* operator, indx eltix, indx flexix, bool* xequal,
                 bool* yequal)
 {
     indx ix;
-    Cd coord;
+    Cd coord = { 0, 0 };
 
     *operator= RMT;
     if (flexix < 2)
@@ -2176,7 +2176,7 @@ CombinePaths(void)
 static int16_t
 GetOperandCount(int16_t op)
 {
-    int16_t count;
+    int16_t count = 0;
 
     if (op < ESCVAL)
         switch (op) {
