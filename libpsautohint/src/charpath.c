@@ -435,7 +435,6 @@ AddLine(indx mIx, indx pathIx)
                        dirname, gGlyphName);
             }
             return;
-            break;
         case RCT:
             if ((abs(start->x1 - end->x2) < fixTwo) &&
                 (abs(start->x1 - pathlist[mIx].path[i - 1].x) < fixTwo))
@@ -2001,19 +2000,16 @@ CoordsEqual(indx dir1, indx dir2, indx opIx, indx eltIx, int16_t op)
                 return (path1->rx1 == path2->rx1);
             else /* op == VHCT */
                 return (path1->ry1 == path2->ry1);
-            break;
         case 1:
             if (op == RCT)
                 return (path1->ry1 == path2->ry1);
             else
                 return (path1->rx2 == path2->rx2);
-            break;
         case 2:
             if (op == RCT)
                 return (path1->rx2 == path2->rx2);
             else
                 return (path1->ry2 == path2->ry2);
-            break;
         case 3:
             if (op == RCT)
                 return (path1->ry2 == path2->ry2);
@@ -2021,13 +2017,10 @@ CoordsEqual(indx dir1, indx dir2, indx opIx, indx eltIx, int16_t op)
                 return (path1->ry3 == path2->ry3);
             else /* op == VHCT */
                 return (path1->rx3 == path2->rx3);
-            break;
         case 4:
             return (path1->rx3 == path2->rx3);
-            break;
         case 5:
             return (path1->ry3 == path2->ry3);
-            break;
         default:
             GetMasterDirName(dirname, dir1);
             LogMsg(LOGERROR, NONFATALERROR,
