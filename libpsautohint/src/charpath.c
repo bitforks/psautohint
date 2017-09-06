@@ -2383,9 +2383,9 @@ GetHintsDir(void)
 }
 #endif
 
-static bool
-MergeCharPaths(const ACFontInfo* fontinfo, char** outbuffer, char** srcglyphs,
-               int nmasters)
+bool
+MergeCharPaths(const ACFontInfo* fontinfo, char** srcglyphs, int nmasters,
+               char** outbuffer)
 {
     bool ok;
 
