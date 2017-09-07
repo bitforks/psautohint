@@ -660,7 +660,7 @@ CheckForZeroLengthCP(void)
  number of points and in the same path order.  If this isn't the
  case the character is not included in the font. */
 static bool
-CompareCharPaths(const ACFontInfo* fontinfo, char** glyphs)
+CompareCharPaths(const ACFontInfo* fontinfo, const char** glyphs)
 {
     indx mIx, ix, i;
     int32_t totalPathElt, minPathLen;
@@ -2374,7 +2374,7 @@ GetHintsDir(void)
 #endif
 
 bool
-MergeCharPaths(const ACFontInfo* fontinfo, char** srcglyphs, int nmasters,
+MergeCharPaths(const ACFontInfo* fontinfo, const char** srcglyphs, int nmasters,
                char** outbuffer)
 {
     bool ok;

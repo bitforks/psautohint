@@ -464,7 +464,7 @@ bool AutoColor(const ACFontInfo* fontinfo, const char* srcbezdata,
                bool fixStems, bool debug, bool extracolor, bool changeChar,
                bool roundCoords);
 
-bool MergeCharPaths(const ACFontInfo* fontinfo, char** srcglyphs, int nmasters,
+bool MergeCharPaths(const ACFontInfo* fontinfo, const char** srcglyphs, int nmasters,
                     char** outbuffer);
 
 #endif /* AC_AC_H_ */
